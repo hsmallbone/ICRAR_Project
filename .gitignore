@@ -20,3 +20,6 @@ pip-log.txt
 .tox
 
 .DS_Store
+*.DS_Store
+*/.DS_Store
+**/.DS_Store
