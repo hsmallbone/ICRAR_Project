@@ -1,0 +1,4 @@
+recursive-include icrar/public *
+include icrar/public/favicon.ico
+recursive-include icrar/i18n *
+recursive-include icrar/templates *

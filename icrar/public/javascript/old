@@ -1,0 +1,51 @@
+
+	function fill_fixed_redshift(data, x, y, z) {
+		var minDist = Number.MAX_VALUE, minIdx, params = data.telescope.params;
+		for (var i = 0; i < data.redshift_tsys.length; i++) { // extract the closest redshift index that we have actual data for
+			var dist = Math.pow(z - data.redshift_tsys[i].z, 2);
+			if (dist < minDist) {
+				minDist = dist;
+				minIdx = i;
+			}
+		}
+		// use constant redshift for calculating the subprobe values
+		var redshift = data.redshift_tsys[minIdx].z; // TODO: lerp
+		var tsys = data.redshift_tsys[minIdx].tsys;
+		for (var i = 0; i < params.length; i++) {
+			var scaling_factor = (subprobe === "rms") ? tsys : (subprobe === "nhi") ? tsys * Math.pow(1 + redshift, 1.5) : Math.pow(tsys, 2);
+			x[i] = params[i].beam * (1 + redshift);
+			var yval = (subprobe === "rms") ? params[i].rms : (subprobe === "nhi") ? params[i].nhi : params[i].ss;
+			y[i] = yval * scaling_factor;
+		}
+	}
+
+	function fill_fixed_beam(data, x, y, beam) {
+		var minDist = Number.MAX_VALUE, minIdx, params = data.telescope.params;
+		var z = $("#fixed-redshift").val();
+		for (var i = 0; i < data.redshift_tsys.length; i++) { // extract the closest redshift to the clicked point that we have data for
+			var dist = Math.pow(z - data.redshift_tsys[i].z, 2);
+			if (dist < minDist) {
+				minDist = dist;
+				minIdx = i;
+			}
+		}
+		minDist = Number.MAX_VALUE;
+		var scaling_factor = 1 + data.redshift_tsys[minIdx].z;
+		for (var i = 0; i < params.length; i++) { // extract the beam index to use over the data from the current redshift
+			var dist = Math.pow(params[i].beam * scaling_factor - beam); // extrapolated beam at the current redshift
+			if (dist < minDist) {
+				minDist = dist;
+				minIdx = i;
+			}
+		}
+		// use constant subprobe value and instead extrapolate using redshift
+		var yval = (subprobe === "rms") ? params[minIdx].rms : (subprobe === "nhi") ? params[minIdx].nhi : params[minIdx].ss;	
+		for (var i = 0; i < data.redshift_tsys.length; i++) {
+			var redshift = data.redshift_tsys[i].z; // TODO: lerp
+			var tsys = data.redshift_tsys[i].tsys;
+			var scaling_factor = (subprobe === "rms") ? tsys : (subprobe === "nhi") ? tsys * Math.pow(1 + redshift, 1.5) : Math.pow(tsys, 2);
+
+			x[i] = params[minIdx].beam * (1 + redshift);
+			y[i] = yval * scaling_factor;
+		}
+	}

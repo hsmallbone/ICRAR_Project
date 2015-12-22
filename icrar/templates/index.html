@@ -1,0 +1,139 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="master.html" />
+
+<head>
+  <title></title>
+</head>
+
+<body>
+	<!--<h3>Upload telescope configuration</h3>
+	<form method="post" action="/upload_telescope" enctype="multipart/form-data">
+		<div class="row">
+			<div class="col-lg-3">
+				<input type="file" class="form-control" name="f"/>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-lg-2">
+				<button type="submit" class="btn btn-success">Submit</button>
+			</div>
+		</div>
+	</form>-->
+	<div class="row">
+		<div class="col-lg-1">
+			<div class="dropdown">
+			  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+			    <span id="dropdown-text">Telescope</span>
+			    <span class="caret"></span>
+			  </button>
+			  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1" id="telescope-select">
+			    <li><a href="#" data-telescope="skamid">SKA-MID</a></li>
+			    <li><a href="#" data-telescope="askap30">ASKAP30</a></li>
+			    <li><a href="#" data-telescope="meerkat">MeerKAT</a></li>
+			  </ul>
+			</div>
+		</div>
+		<div class="col-lg-3">
+			<p class="col-lg-3 form-control-static">Plot:</p>
+			<div class="col-lg-9">
+				<select class="form-control probe-select" id="plot-select">
+					<option value=""></option>
+					<option value="nhi">NHI</option>
+					<option value="rms">RMS Noise</option>
+					<option value="ss">Survey Speed</option>
+					<option value="resolution">Resolution</option>
+					<option value="redshift">Redshift</option>
+					<option value="time">Time</option>
+					<option value="area">Area</option>
+				</select>
+			</div>
+		</div>
+		<div class="col-lg-2">
+			<div class="checkbox">
+			    <label>
+			      <input id="phys-resolution-toggle" type="checkbox"/> Use physical resolution
+			    </label>
+			  </div>
+		</div>
+	</div>
+	<div class="row">
+		<p class="col-lg-1 form-control-static">Axes:</p>
+		<div class="col-lg-2">
+			<select class="axis-select form-control" id="axis-1-select" disabled="disabled">
+				<option value=""></option>
+				<option value="time">Time</option>
+				<option value="area">Area</option>
+				<option value="resolution">Resolution</option>
+				<option value="redshift">Redshift</option>
+				<option value="nhi">NHI</option>
+			</select>
+		</div>
+		<div class="col-lg-2">
+			<select class="axis-select form-control" id="axis-2-select" disabled="disabled">
+				<option value=""></option>
+				<option value="area">Area</option>
+				<option value="time">Time</option>
+				<option value="resolution">Resolution</option>
+				<option value="redshift">Redshift</option>
+				<option value="nhi">NHI</option>
+			</select>
+		</div>
+	</div>
+	<div class="row">
+		<p class="col-lg-2 form-control-static">Axis range:</p>
+	</div>	
+	<div class="row">
+		<p class="col-lg-1 form-control-static" id="axis-1-range-title">X axis</p>
+		<div class="col-lg-2">
+			<input type="text" class="form-control" placeholder="From" id="axis-1-from"/>
+		</div>
+		<div class="col-lg-2">
+			<input type="text" class="form-control" placeholder="To" id="axis-1-to"/>
+		</div>
+		<div class="col-lg-2">
+			<input type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints"/>
+		</div>
+	</div>
+	<div class="row">
+		<p class="col-lg-1 form-control-static" id="axis-2-range-title">Y axis</p>
+		<div class="col-lg-2">
+			<input type="text" class="form-control" placeholder="From" id="axis-2-from"/>
+		</div>		
+		<div class="col-lg-2">
+			<input type="text" class="form-control" placeholder="To" id="axis-2-to"/>
+		</div>
+		<div class="col-lg-2">
+			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints"/>
+		</div>
+	</div>
+	<div class="row">
+		<p class="fixed-value-container form-control-static col-lg-1" style="display: none">
+			Fix:
+		</p>
+		<div class="fixed-value-container col-lg-3" style="display: none">
+				<div class="input-group">
+		  			<input type="text" class="fixed-axis-input form-control" id="fixed-1-value"/>
+		  			<span class="input-group-addon" id="fixed-1-units"></span>
+				</div>
+		</div>
+		<div class="fixed-value-container col-lg-3" style="display: none">
+				<div class="input-group">
+		  			<input type="text" class="fixed-axis-input form-control" id="fixed-2-value"/>
+		  			<span class="input-group-addon" id="fixed-2-units"></span>
+				</div>
+		</div>
+		<div class="col-lg-1">
+			<button class="btn btn-success" id="plot_primary" disabled="disabled">Plot</button>
+		</div>
+	</div>
+	<div class="row" style="padding-top:20px">
+		<div id="plot"></div>
+	</div>
+	<div class="row">
+		<div id="detailPlot1"></div>
+		<div id="detailPlot2"></div>
+	</div>
+</body>
+</html>

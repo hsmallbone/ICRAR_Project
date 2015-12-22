@@ -1,0 +1,8 @@
+TurboGears2 >= 2.3.7
+Beaker
+Genshi
+zope.sqlalchemy >= 0.4
+sqlalchemy
+alembic
+WebHelpers2
+Babel
