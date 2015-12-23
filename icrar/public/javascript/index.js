@@ -1,6 +1,6 @@
 var disable_subaxis_hover;
 var fixed_subaxis_pt;
-var prev_x, prev_y, prev_axes, prev_input;
+var prev_x, prev_y, prev_z, prev_axes, prev_input;
 var level_function;
 var use_physical_resolution;
 var axes = ["", ""], plot_axis;
@@ -39,28 +39,14 @@ var param_info = {
 var telescope;
 var cached_telescopes = {};
 
-function Einv(z) {
-	var omegaL = 0.7;    
-	var omegaM = 0.3;
-	var omegak = 0;
-	var E = Math.sqrt(omegaM * Math.pow(1 + z, 3) + omegak * Math.pow(1 + z, 2) + omegaL);
-	return 1 / E;
-}
-
-function dist_comoving(z) {
-	var c = 299792.458;
-	var H0 = 70;
-	var DH = c/H0;
-	var integral = romberg_integral(Einv, 0, z);
-	return DH * integral;
-}
-
-function dist_trans_comoving(z) {  
-  return dist_comoving(z);
-}
-
-function dist_luminosity(z) {
-  return (1 + z) * dist_trans_comoving(z);
+function download_data(base_filename, data, ext) {
+	var elem = document.createElement('a');
+	elem.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(data));
+	elem.setAttribute('download', base_filename + (Date.now() / 1000 | 0) + "." + (ext || "txt"));
+	elem.style.display = 'none';
+	document.body.appendChild(elem);
+	elem.click();
+	document.body.removeChild(elem);
 }
 
 function get_axis_value(data, x, axis, range) {
@@ -93,154 +79,12 @@ function get_axis_value(data, x, axis, range) {
 	}
 }
 
-function get_tsys(data, redshift) {
-	return everpolate.linear(redshift, data.redshift, data.tsys)[0];
-}
-
-function calc_obstime_sp(syn_beamsize, log_beamsize, log_nhi, freqwidth, nhi_reqtime_reqwidth) {
-	var log_syn_beamsize = Math.log10(syn_beamsize);
-	var nhi_1000hr_50kHz = everpolate.linear(log_syn_beamsize, log_beamsize, log_nhi)[0];
-	
-	var nhi_1000hr_reqwidth = Math.log10(Math.sqrt(freqwidth / 50000)) + nhi_1000hr_50kHz;
-	return 1000 * Math.pow(10, 2 * (nhi_1000hr_reqwidth - nhi_reqtime_reqwidth));
-}
-
-function calc_omega_b(z, c, freqHI, dishsize) {
-	var theta_p = 1.22 * (1 + z) * ((c * 1000 / freqHI) / dishsize) * (180 / Math.PI);
-	return 0.5665 * Math.pow(theta_p, 2);
-}
-
-function level_function(data, input, plot_axis) {
-	var dishsize = data.telescope.dishsize;
-	var fovne = 18;
-	var freqwidth = 50000;
-	var freqHI = 1.4204 * Math.pow(10, 9);
-	var c = 299792.458; 
-	var nhi_reqtime_reqwidth = input.nhi || 19.3;
-	var z = input.z || input.redshift || 0;
-	var obstime_total = input.time || 1000;
-	var syn_beamsize = input.resolution || 5;
-
-	if (input.use_physical_resolution) {
-		var DL = dist_luminosity(z);
-	    var DA = DL / Math.pow(1 + z, 2);
-	    syn_beamsize = (input.resolution || 10) / (DA * (10 / 36) * (Math.PI / 180));
-	}
-
-	var omega_b = calc_omega_b(z, c, freqHI, dishsize);
-	var npointings = input.area ? input.area/omega_b : 1;
-
-	var rms = new Array(data.telescope.params.length), nhi = new Array(data.telescope.params.length), beam = new Array(data.telescope.params.length),
-	log_nhi = new Array(data.telescope.params.length), log_beamsize = new Array(data.telescope.params.length), ss = new Array(data.telescope.params.length);
-	var Tsys = input.static_tsys ? input.static_tsys : get_tsys(data, z); 
-	
-	for (var i = 0; i < data.telescope.params.length; i++) {
-		rms[i] = data.telescope.params[i].rms / Math.sqrt(1000 / 8);
-	    nhi[i] = data.telescope.params[i].nhi / Math.sqrt(1000 / 8);
-	    ss[i] = data.telescope.params[i].ss / Math.sqrt(1000 / 8);
-	  
-	    if (z) {
-	        beam[i] = (1 + z) * data.telescope.params[i].beam;
-	      	rms[i] = rms[i] * Tsys;
-	      	if (/*!($opt_f)*/true) {
-				nhi[i] = nhi[i] * Tsys * Math.pow(1 + z, 1.5);
-			} else {
-				nhi[i] = nhi[i] * Tsys * Math.pow(1 + z, 2);
-			}
-			ss[i] = ss[i] * Math.pow(Tsys, 2) * Math.pow(1 + z, 2);
-	    } else {
-	    	beam[i] = data.telescope.params[i].beam;
-	    }
-
-	    log_nhi[i] = Math.log10(nhi[i]);
-	    log_beamsize[i] = Math.log10(beam[i]);
-	}
-	var obstime_sp;
-	if (!input.area || !input.time) {
-		obstime_sp = calc_obstime_sp(syn_beamsize, log_beamsize, log_nhi, freqwidth, nhi_reqtime_reqwidth);
-	} else if (!input.resolution || !input.nhi) {
-		obstime_sp = obstime_total / npointings;
-	}
-
-	if (plot_axis === "area") {
-		return (obstime_total / obstime_sp) * omega_b;
-	} else if (plot_axis === "time") {
-		return obstime_sp * npointings; 
-	} else if (plot_axis === "resolution") {
-		var nhi_1000hr_reqwidth = 0.5 * Math.log10(obstime_sp / 1000) + nhi_reqtime_reqwidth; 
-		var nhi_1000hr_50kHz = nhi_1000hr_reqwidth - Math.log10(Math.sqrt(freqwidth / 50000));
-		
-		log_nhi.reverse();
-		log_beamsize.reverse();
-		var log_syn_beamsize = everpolate.linear(nhi_1000hr_50kHz, log_nhi, log_beamsize)[0];
-		return Math.pow(10, log_syn_beamsize);
-	} else if (plot_axis === "nhi") {
-		var log_syn_beamsize = Math.log10(syn_beamsize);
-		var nhi_1000hr_50kHz = everpolate.linear(log_syn_beamsize, log_beamsize, log_nhi)[0];   
-
-		var nhi_1000hr_reqwidth = Math.log10(Math.sqrt(freqwidth/50000)) + nhi_1000hr_50kHz;
-		return nhi_1000hr_reqwidth - 0.5 * Math.log10(obstime_sp/1000);
-	} else if (plot_axis === "redshift") {
-		var redshift_found = 0;
-		var beamsize_z0 = beam.slice();
-		var rms_z0 = rms.slice();
-		var nhi_z0 = nhi.slice();
-	 
-		for (var z = 0; z < 20; z += 0.01) {
-		    var z_max = z;
-		    var Tsys = input.static_tsys ? input.static_tsys : get_tsys(data, z);
-		    for (var i = 0; i < beamsize_z0.length; i++) {
-		    	beam[i] = (1 + z) * beamsize_z0[i];
-		    	rms[i] = Tsys * rms_z0[i];
-		    	if (/*!($opt_f)*/true) {
-			  		nhi[i] = Tsys * Math.pow(1 + z, 1.5) * nhi_z0[i];
-			    } else {
-			  		nhi[i] = Tsys * Math.pow(1 + z, 2) * nhi_z0[i];
-			    }
-			    log_beamsize[i] = Math.log10(beam[i]);
-			    log_nhi[i] = Math.log10(nhi[i]);
-		    }
-
-		    var log_syn_beamsize = Math.log10(syn_beamsize);
-
-		    /*if ($opt_p) {
-		     	var omega_b = FoVne; # nb assuming no redshift dependence for PAF, Ie fully sampled high frequency limit
-		    } else {*/
-	  			var omega_b = calc_omega_b(z, c, freqHI, dishsize);
-		    //}
-		    var npointings = input.area ? input.area/omega_b : 1;
-		  
-		    var obstime_sp = obstime_total/npointings; 
-		    var nhi_1000hr_reqwidth = 0.5 * Math.log10(obstime_sp / 1000) + nhi_reqtime_reqwidth; 
-		    var nhi_1000hr_50kHz = nhi_1000hr_reqwidth - Math.log10(Math.sqrt(freqwidth / 50000));
-		    var nhi_1000hr_50kHz_possible = everpolate.linear(log_syn_beamsize, log_beamsize, log_nhi)[0];
-		    if (nhi_1000hr_50kHz > nhi_1000hr_50kHz_possible) {
-		      redshift_found = 1;
-		    } else {
-		      break;
-		    }
-		}
-		if (redshift_found === 1) {
-			return z_max;
-		} else {
-			return 0;
-		}
-	} 
-
-	if (plot_axis === "ss") {
-		var ss_1000hr_50kHz = everpolate.linear(Math.log10(syn_beamsize), log_beamsize, ss)[0];
-		var ss_1000hr_reqwidth = ss_1000hr_50kHz * Math.sqrt(50000/freqwidth);
-		return ss_1000hr_reqwidth;
-	} else if (plot_axis === "rms") {
-  		var rms_1000hr_50kHz = everpolate.linear(Math.log10(syn_beamsize), log_beamsize, rms)[0];
-  		var rms_1000hr_reqwidth = rms_1000hr_50kHz * Math.sqrt(50000/freqwidth);
-  		var rms_reqtime_reqwidth = Math.sqrt(1000/obstime_sp) * rms_1000hr_reqwidth;
-  		return 5 * rms_reqtime_reqwidth;
-	}
+function get_axis_title(axis) {
+	return param_info[axis].title;
 }
 
 function get_pretty_axis_title(axis) {
-	var title = param_info[axis].title;
+	var title = get_axis_title(axis);
 	if (param_info[axis].units) {
 		title += " (" + param_info[axis].units + ")";
 	}
@@ -284,6 +128,7 @@ function plot(data, fixed_input, plot_axis, axis_sizes) {
 	prev_input = input;
 	prev_x = x;
 	prev_y = y;
+	prev_z = z;
 	prev_axes = axes;
 
 	var pts =  [{
@@ -302,9 +147,41 @@ function plot(data, fixed_input, plot_axis, axis_sizes) {
 		yaxis.type = 'log';
 	}
 
-	Plotly.newPlot('plot', pts, {xaxis: xaxis, yaxis: yaxis, zaxis: {title: plot_axis}});
-	$("#fix-x-opt").text("Fix " + param_info[axes[0]].title);
-	$("#fix-y-opt").text("Fix " + param_info[axes[1]].title);
+	Plotly.newPlot('plot', pts, 
+	{
+		title: get_axis_title(plot_axis) + " against " + get_axis_title(axes[0]) + " and " + get_axis_title(axes[1]), 
+		xaxis: xaxis, 
+		yaxis: yaxis, 
+		zaxis: {title: plot_axis}
+	}, 
+	{
+		hovermode: '',
+		displaylogo: false, 
+		showLink: false, 
+		modeBarButtonsToRemove: ["sendDataToCloud"], 
+		modeBarButtonsToAdd: [{
+		    name: 'exportData',
+		    title: 'Export data to text',
+		    icon: Plotly.Icons.disk,
+		    click: function(gd) {
+		    	var data = "Fixed: ";
+		    	for (var prop in fixed_input) {
+		    		if (fixed_input.hasOwnProperty(prop)) {
+		    			data += prop + "\t" + fixed_input[prop] + ",";
+		    		}
+		    	}
+		    	data += "\n";
+		    	data += axes[0] + "\t" + axes[1] + "\t" + plot_axis + "\n";
+		    	for (var i = 0; i < axis_size[0] * axis_size[1]; i++) {
+		    		data += prev_x[i] + "\t" + prev_y[i] + "\t" + prev_z[i] + "\n";
+		    	}
+		    	download_data("icrar_contour_data", data);
+		    }
+		}], 
+		displayModeBar: true
+	});
+	$("#fix-x-opt").text("Fix " + get_axis_title(axes[0]));
+	$("#fix-y-opt").text("Fix " + get_axis_title(axes[1]));
 }
 
 function getTelescope(name, cb) {
@@ -319,17 +196,44 @@ function getTelescope(name, cb) {
 	});
 }
 
+function validate(succ, prefix, suffix) {
+	if (!(suffix instanceof Array)) {
+		suffix = [suffix];
+	}
+	for (var i = 0; i < suffix.length; i++) {
+		if (!succ) $(prefix + "-" + suffix[i]).parent().addClass("has-error");
+		else $(prefix + "-" + suffix[i]).parent().removeClass("has-error");
+	}
+	return succ;
+}
+
 function get_axis_size_dict(n, axis) {
+	var prefix = "#axis-" + n;
 	var d = {
-		"from": parseInt($("#axis-"+n+"-from").val()),
-		"to": parseInt($("#axis-"+n+"-to").val()),
-		"npoints": parseInt($("#axis-"+n+"-npoints").val())
+		"from": parseInt($(prefix + "-from").val()),
+		"to": parseInt($(prefix + "-to").val()),
+		"npoints": parseInt($(prefix + "-npoints").val())
 	};
-	if (axis === "resolution" || axis === "redshift")
+	if (axis === "resolution" || axis === "redshift") {
+		$(prefix + "-from," + prefix + "-to," + prefix + "-npoints").parent().removeClass("has-error");
 		return d;
-	if (!d.from || !d.npoints || !d.to || d.to-d.from < 0)
+	}
+	var succ = true;
+	succ &= validate(d.from, prefix, "from");
+	succ &= validate(d.npoints, prefix, "npoints");
+	succ &= validate(d.to, prefix, "to");
+	succ &= validate(d.to - d.from, prefix, ["from", "to"]);
+	if (!d.from)
 		return;
 	return d;
+}
+
+function set_opts(input, names) {
+	for (var i = 0; i < names.length; i++) {
+		if ($("#opt_" + names[i]).val()) {
+			input[names[i]] = $("#opt_" + names[i]).val();
+		}
+	}
 }
 
 function replot(cb) {
@@ -345,10 +249,28 @@ function replot(cb) {
 		for (var i = 0; i < 2; i++) {
 			fixed_input[fixed[i]] = fixed_values[i];
 		}
+		set_opts(fixed_input, ["dishsize", "fovne", "freqwidth", "velwidth"]);
 		plot(t, fixed_input, plot_axis, axis_size);
 		$("#plot_primary").prop("disabled", false);
 		if (cb) cb();
 	});
+}
+
+function subplot_downloader(idx, x, y) {
+	return function (gd) {
+		var data = "Fixed: ";
+		var fixed_axes = get_fixed_axes(prev_axes);
+		for (var i = 0; i < 2; i++) {
+			data += fixed_axes[i] + "\t" + prev_input[fixed_axes[i]] + ",";
+		}
+		data += idx === 1 ? prev_axes[0] + "\t" + fixed_subaxis_pt.x : prev_axes[1] + "\t" + fixed_subaxis_pt.y; 
+		data += "\n";
+		data += idx === 1 ? prev_axes[1] : prev_axes[0] + "\t" + plot_axis + "\n";
+		for (var i = 0; i < x.length; i++) {
+			data += x[i] + "\t" + y[i] + "\n";
+		}
+		download_data("icrar_data", data);
+	}
 }
 
 function replot_subprobe() {
@@ -358,7 +280,7 @@ function replot_subprobe() {
 			var source = i === 1 ? prev_y : prev_x;
 			var unique_x = {};
 			var size = source.length;
-			for (var j = 0; j < size; i++) {
+			for (var j = 0; j < size; j++) {
 				if (i === 1) {
 					prev_input[prev_axes[0]] = fixed_subaxis_pt.x;
 					prev_input[prev_axes[1]] = source[j];
@@ -393,7 +315,27 @@ function replot_subprobe() {
 			if (plot_axis !== 'redshift') {
 				yaxis.type = 'log';
 			}
-			//Plotly.newPlot('detailPlot' + i, pts, {xaxis: xaxis, yaxis: yaxis});
+			var fixed_axis_title = i === 1 ? get_axis_title(prev_axes[0]) : get_axis_title(prev_axes[1]);
+			var fixed_axis_value = i === 1 ? fixed_subaxis_pt.x : fixed_subaxis_pt.y;
+			Plotly.newPlot('detailPlot' + i, pts, 
+				{
+					title: (i === 1 ? get_axis_title(prev_axes[1]) : get_axis_title(prev_axes[0])) 
+					+ " with fixed " + fixed_axis_title + " to " + fixed_axis_value, 
+					xaxis: xaxis, 
+					yaxis: yaxis
+				}, 
+				{
+					displaylogo: false, 
+					showLink: false, 
+					modeBarButtonsToRemove: ["sendDataToCloud"], 
+					modeBarButtonsToAdd: [{
+					    name: 'exportData',
+					    title: 'Export data to text',
+					    icon: Plotly.Icons.disk,
+					    click: subplot_downloader(i, x, y)
+					}], 
+					displayModeBar: true
+				});
 		}
 	});
 }
@@ -429,7 +371,7 @@ $(function() {
 			$(".fixed-value-container").css('display', '');
 			for (var i = 1; i <= 2; i++) {
 				var $elem = $("#fixed-" + i + "-value");
-				$elem.val('').attr('placeholder', param_info[fixed[i - 1]].title);
+				$elem.val('').attr('placeholder', get_axis_title(fixed[i - 1]));
 				var $units = $("#fixed-" + i + "-units");
 				if (param_info[fixed[i - 1]].units) {
 					$units.css('display', '');
@@ -440,6 +382,8 @@ $(function() {
 					} else {
 						$units.text(param_info[fixed[i - 1]].units);
 					}
+				} else if (fixed[i - 1] === "redshift") {
+					$units.text("");
 				} else {
 					$units.css('display', 'none');	
 				}
@@ -447,7 +391,9 @@ $(function() {
 		}
 
 		var fixed_values = [parseFloat($("#fixed-1-value").val()), parseFloat($("#fixed-2-value").val())];
-		if (!plot_axis || !telescope || !fixed_values[0] || !fixed_values[1]) {
+		var axis_size = [get_axis_size_dict(1, axes[0]), get_axis_size_dict(2, axes[1])];
+
+		if (!plot_axis || !telescope || !fixed_values[0] || !fixed_values[1] || !axis_size[0] || !axis_size[1]) {
 			$("#plot_primary").prop('disabled', true);	
 			return;	
 		}
@@ -505,7 +451,7 @@ $(function() {
 				if (val === possible_parameters[i]) {
 					continue;
 				}
-				html += "<option value='" + possible_parameters[i] + "'>" + param_info[possible_parameters[i]].title + "</option>";
+				html += "<option value='" + possible_parameters[i] + "'>" + get_axis_title(possible_parameters[i]) + "</option>";
 			}
 			$(".axis-select").html(html).prop('disabled', false);
 		}
@@ -521,6 +467,10 @@ $(function() {
 			axes[1] = v;
 		}
 		updateUI("axes");
+	});
+
+	$("#axis-1-from,#axis-1-to,#axis-1-npoints,#axis-2-from,#axis-2-to,#axis-1-npoints").change(function () {
+		updateUI("axes-units");
 	});
 
 	$("#phys-resolution-toggle").change(function() {

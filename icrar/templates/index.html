@@ -22,7 +22,7 @@
 		</div>
 	</form>-->
 	<div class="row">
-		<div class="col-lg-1">
+		<div class="col-lg-2">
 			<div class="dropdown">
 			  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
 			    <span id="dropdown-text">Telescope</span>
@@ -35,22 +35,20 @@
 			  </ul>
 			</div>
 		</div>
-		<div class="col-lg-3">
-			<p class="col-lg-3 form-control-static">Plot:</p>
-			<div class="col-lg-9">
-				<select class="form-control probe-select" id="plot-select">
-					<option value=""></option>
-					<option value="nhi">NHI</option>
-					<option value="rms">RMS Noise</option>
-					<option value="ss">Survey Speed</option>
-					<option value="resolution">Resolution</option>
-					<option value="redshift">Redshift</option>
-					<option value="time">Time</option>
-					<option value="area">Area</option>
-				</select>
-			</div>
-		</div>
+		<p class="col-lg-1 form-control-static text-right">Plot:</p>
 		<div class="col-lg-2">
+			<select class="form-control probe-select" id="plot-select">
+				<option value=""></option>
+				<option value="nhi">NHI</option>
+				<option value="rms">RMS Noise</option>
+				<option value="ss">Survey Speed</option>
+				<option value="resolution">Resolution</option>
+				<option value="redshift">Redshift</option>
+				<option value="time">Time</option>
+				<option value="area">Area</option>
+			</select>
+		</div>
+		<div class="col-lg-3">
 			<div class="checkbox">
 			    <label>
 			      <input id="phys-resolution-toggle" type="checkbox"/> Use physical resolution
@@ -82,29 +80,29 @@
 		</div>
 	</div>
 	<div class="row">
-		<p class="col-lg-2 form-control-static">Axis range:</p>
+		<strong><p class="col-lg-2 form-control-static">Axis range:</p></strong>
 	</div>	
 	<div class="row">
 		<p class="col-lg-1 form-control-static" id="axis-1-range-title">X axis</p>
-		<div class="col-lg-2">
+		<div class="col-lg-2 form-group">
 			<input type="text" class="form-control" placeholder="From" id="axis-1-from"/>
 		</div>
-		<div class="col-lg-2">
+		<div class="col-lg-2 form-group">
 			<input type="text" class="form-control" placeholder="To" id="axis-1-to"/>
 		</div>
-		<div class="col-lg-2">
+		<div class="col-lg-2 form-group">
 			<input type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints"/>
 		</div>
 	</div>
 	<div class="row">
 		<p class="col-lg-1 form-control-static" id="axis-2-range-title">Y axis</p>
-		<div class="col-lg-2">
+		<div class="col-lg-2 form-group">
 			<input type="text" class="form-control" placeholder="From" id="axis-2-from"/>
 		</div>		
-		<div class="col-lg-2">
+		<div class="col-lg-2 form-group">
 			<input type="text" class="form-control" placeholder="To" id="axis-2-to"/>
 		</div>
-		<div class="col-lg-2">
+		<div class="col-lg-2 form-group">
 			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints"/>
 		</div>
 	</div>
@@ -124,6 +122,29 @@
 		  			<span class="input-group-addon" id="fixed-2-units"></span>
 				</div>
 		</div>
+	</div>
+	<div class="row">
+		<div class="col-lg-5">
+			<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+		  		<div class="panel panel-default">
+			    	<div class="panel-heading" role="tab" id="headingOne">
+			      		<h4 class="panel-title">
+			        		<a role="button" data-toggle="collapse" data-parent="#accordion" href="#aopb" aria-controls="aopb">Additional options</a>
+			    		</h4>
+			    	</div>
+				    <div id="aopb" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+						<div class="panel-body">
+							<div class="form-group"><input type="text" class="form-control" id="opt_dishsize" placeholder="Dish size"/></div>
+							<div class="form-group"><input type="text" class="form-control" id="opt_fovne" placeholder="Fixed noise equivalent field of view"/></div>
+							<div class="form-group"><input type="text" class="form-control" id="opt_freqwidth" placeholder="Frequency width (Hz)"/></div>
+							<div class="form-group"><input type="text" class="form-control" id="opt_velwidth" placeholder="Rest frame velocity width (km/s)"/></div>
+						</div>
+				    </div>
+			  	</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
 		<div class="col-lg-1">
 			<button class="btn btn-success" id="plot_primary" disabled="disabled">Plot</button>
 		</div>
