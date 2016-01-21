@@ -12,16 +12,33 @@ def load_parameters(f):
 		telescope['dishsize'] = int(lines[1].strip())
 		telescope['nat'] = parse_params(lines[2].strip())
 		telescope['params'] = []
+		telescope['beam'] = []
 		for line in lines[3:]:
 			line = line.strip()
 			if not line:
 				continue
-			telescope['params'].append(parse_params(line))
+			params = parse_params(line)
+			telescope['params'].append(params)
+			telescope['beam'].append(params['beam'])
 	TELESCOPES[telescope['name'].lower()] = telescope
 	return telescope
 
+def load_2dswml_himassfunction(f):
+	readings = list()
+	with open(f, 'r') as inp:
+		for line in inp.readlines():
+			parts = line.split()
+			logmhi = float(parts[2])
+			logw20 = float(parts[3])
+			logtheta = float(parts[4])
+			if logtheta == 0.:
+				continue
+			readings.append({'logmhi' : logmhi, 'logw20' : logw20, 'logtheta' : logtheta})
+	return readings
+
 import os, tg
 config_dir = os.path.join(tg.config['paths']['root'], 'config')
+HI_MASS_FUNCTION_SWML = load_2dswml_himassfunction(os.path.join(config_dir,'swmlphi_2d.txt'))
 SKA_MID = load_parameters(os.path.join(config_dir,'ska-mid.telescope'))
 MEERKAT = load_parameters(os.path.join(config_dir,'meerkat.telescope'))
 ASKAP30 = load_parameters(os.path.join(config_dir,'askap30.telescope'))

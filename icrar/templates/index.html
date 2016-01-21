@@ -29,9 +29,9 @@
 			    <span class="caret"></span>
 			  </button>
 			  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1" id="telescope-select">
-			    <li><a href="#" data-telescope="skamid">SKA-MID</a></li>
-			    <li><a href="#" data-telescope="askap30">ASKAP30</a></li>
-			    <li><a href="#" data-telescope="meerkat">MeerKAT</a></li>
+			  	<li py:for="telescope in telescopes">
+			  		<a href="#" data-telescope="${telescope}">${telescopes[telescope]['name']}</a>
+			  	</li>
 			  </ul>
 			</div>
 		</div>
@@ -42,6 +42,7 @@
 				<option value="nhi">NHI</option>
 				<option value="rms">RMS Noise</option>
 				<option value="ss">Survey Speed</option>
+				<option value="n">N</option>
 				<option value="resolution">Resolution</option>
 				<option value="redshift">Redshift</option>
 				<option value="time">Time</option>
@@ -56,7 +57,7 @@
 			  </div>
 		</div>
 	</div>
-	<div class="row">
+	<div class="row form-group">
 		<p class="col-lg-1 form-control-static">Axes:</p>
 		<div class="col-lg-2">
 			<select class="axis-select form-control" id="axis-1-select" disabled="disabled">
@@ -77,6 +78,18 @@
 				<option value="redshift">Redshift</option>
 				<option value="nhi">NHI</option>
 			</select>
+		</div>
+	</div>
+	<div class="row form-group schechter-parameters" style="display: none">
+		<p class="col-lg-1 form-control-static">Schechter HI mass function</p>
+		<div class="col-lg-2">
+			<input type="text" class="schechter-parameter form-control" id="schechter-phistar" placeholder="Phi star"/>
+		</div>
+		<div class="col-lg-2">
+			<input type="text" class="schechter-parameter form-control" id="schechter-mhistar" placeholder="MHI star"/>
+		</div>
+		<div class="col-lg-2">
+			<input type="text" class="schechter-parameter form-control" id="schechter-alpha" placeholder="Alpha"/>
 		</div>
 	</div>
 	<div class="row">
@@ -106,7 +119,7 @@
 			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints"/>
 		</div>
 	</div>
-	<div class="row">
+	<div class="row form-group">
 		<p class="fixed-value-container form-control-static col-lg-1" style="display: none">
 			Fix:
 		</p>
