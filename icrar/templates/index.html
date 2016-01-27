@@ -52,13 +52,13 @@
 		<div class="col-lg-3">
 			<div class="checkbox">
 			    <label>
-			      <input id="phys-resolution-toggle" type="checkbox"/> Use physical resolution
+			      <input id="opt_use_physical_resolution" type="checkbox"/> Use physical resolution
 			    </label>
 			  </div>
 		</div>
 	</div>
 	<div class="row form-group">
-		<p class="col-lg-1 form-control-static">Axes:</p>
+		<p class="col-lg-1 form-control-static">Axes</p>
 		<div class="col-lg-2">
 			<select class="axis-select form-control" id="axis-1-select" disabled="disabled">
 				<option value=""></option>
@@ -91,6 +91,13 @@
 		<div class="col-lg-2">
 			<input type="text" class="schechter-parameter form-control" id="schechter-alpha" placeholder="Alpha"/>
 		</div>
+		<div class="col-lg-2">
+			<select class="form-control" id="schechter-select">
+				<option value="">Previous functions</option>
+				<option value="hipass">HIPASS</option>
+				<option value="alfalfa">ALFALFA</option>
+			</select>
+		</div>
 	</div>
 	<div class="row">
 		<strong><p class="col-lg-2 form-control-static">Axis range:</p></strong>
@@ -98,40 +105,40 @@
 	<div class="row">
 		<p class="col-lg-1 form-control-static" id="axis-1-range-title">X axis</p>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="From" id="axis-1-from"/>
+			<input type="text" class="form-control" placeholder="From" id="axis-1-from" value="0"/>
 		</div>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="To" id="axis-1-to"/>
+			<input type="text" class="form-control" placeholder="To" id="axis-1-to" value="0.26"/>
 		</div>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints"/>
-		</div>
+			<input type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints" value="100"/>
+		</div> 
 	</div>
 	<div class="row">
 		<p class="col-lg-1 form-control-static" id="axis-2-range-title">Y axis</p>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="From" id="axis-2-from"/>
+			<input type="text" class="form-control" placeholder="From" id="axis-2-from" value="10"/>
 		</div>		
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="To" id="axis-2-to"/>
+			<input type="text" class="form-control" placeholder="To" id="axis-2-to" value="32"/>
 		</div>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints"/>
+			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints" value="10"/>
 		</div>
 	</div>
 	<div class="row form-group">
 		<p class="fixed-value-container form-control-static col-lg-1" style="display: none">
-			Fix:
+			Fixed values
 		</p>
 		<div class="fixed-value-container col-lg-3" style="display: none">
 				<div class="input-group">
-		  			<input type="text" class="fixed-axis-input form-control" id="fixed-1-value"/>
+		  			<input type="text" class="fixed-axis-input form-control" id="fixed-1-value" value="30940"/>
 		  			<span class="input-group-addon" id="fixed-1-units"></span>
 				</div>
 		</div>
 		<div class="fixed-value-container col-lg-3" style="display: none">
 				<div class="input-group">
-		  			<input type="text" class="fixed-axis-input form-control" id="fixed-2-value"/>
+		  			<input type="text" class="fixed-axis-input form-control" id="fixed-2-value" value="9600"/>
 		  			<span class="input-group-addon" id="fixed-2-units"></span>
 				</div>
 		</div>
@@ -147,10 +154,26 @@
 			    	</div>
 				    <div id="aopb" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
 						<div class="panel-body">
+							<h4>Telescope parameters</h4>
 							<div class="form-group"><input type="text" class="form-control" id="opt_dishsize" placeholder="Dish size"/></div>
-							<div class="form-group"><input type="text" class="form-control" id="opt_fovne" placeholder="Fixed noise equivalent field of view"/></div>
-							<div class="form-group"><input type="text" class="form-control" id="opt_freqwidth" placeholder="Frequency width (Hz)"/></div>
-							<div class="form-group"><input type="text" class="form-control" id="opt_velwidth" placeholder="Rest frame velocity width (km/s)"/></div>
+							<div class="form-group"><input type="text" class="form-control" id="opt_fovne" placeholder="Noise equivalent field of view"/></div>
+							<div class="row form-group">
+								<div class="col-lg-6"><input type="text" class="form-control" id="opt_freqwidth" placeholder="Frequency width (Hz)" value="100000"/></div>
+								<div class="col-lg-6"><input type="text" class="form-control" id="opt_velwidth" placeholder="Velocity width (km/s)"/></div> 
+							</div>
+							<div class="form-group"><input type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)" value="3.405"/></div>
+							<h4>Cosmology</h4>
+							<div class="row form-group">
+								<div class="col-lg-6"><input type="text" class="form-control" id="opt_h0" placeholder="Hubble constant" value="70"/></div>
+								<div class="col-lg-6"><input type="text" class="form-control" id="opt_omegaM" placeholder="OmegaM" value="0.3"/></div>
+							</div>
+							<h4>Detection limits</h4>
+							<div class="form-group"><input type="text" class="form-control" id="opt_sn_lim" placeholder="Minimum S/N to detect galaxies"/></div>
+							<div class="row"><div class="col-lg-12">Schechter function bounds (log MHI)</div></div>
+							<div class="row form-group">
+								<div class="col-lg-6"><input type="text" class="form-control" id="schechter-range-low" value="8.5"/></div>
+								<div class="col-lg-6"><input type="text" class="form-control" id="schechter-range-high" value="11"/></div>
+							</div>
 						</div>
 				    </div>
 			  	</div>
@@ -161,6 +184,9 @@
 		<div class="col-lg-1">
 			<button class="btn btn-success" id="plot_primary" disabled="disabled">Plot</button>
 		</div>
+	</div>
+	<div class="row">
+		<div id="schechterplot"></div>
 	</div>
 	<div class="row" style="padding-top:20px">
 		<div id="plot"></div>

@@ -14,7 +14,9 @@ from icrar.controllers.error import ErrorController
 from astropysics.models import SchechterMagModel, SchechterLumModel
 from math import *
 
+from scipy.optimize import fsolve
 import scipy.integrate as itg
+import random
 
 __all__ = ['RootController']
 
@@ -60,18 +62,40 @@ class RootController(BaseController):
         return dict(page='index', telescopes=TELESCOPES)
 
     def schechter(self, m, phistar, mhistar, alpha):
-        frac = (( m) / ( mhistar))
-        return log(10) * phistar * frac ** (alpha + 1) * exp(-frac)
+        #frac = 10**(0.4*(m-mhistar))
+        #scaling = log(10) * 0.4 - wikipedia values differ from paper?
+        scaling = log(10)
+        frac = m / mhistar
+        return scaling * phistar * frac ** (alpha + 1) * exp(-frac)
+
+    def tullyfouque(self, x, w_e_factor): 
+        v0 = 20
+        return exp(x ** 2 / 14400) * ((x - v0) ** 2 - w_e_factor) + 2 * v0 * (x - v0)
 
     @expose('json')
-    def schechter_himf(self, phistar, mhistar, alpha, low=6, high=11, step=0.1):
+    def schechter_himf(self, phistar, mhistar, alpha, low=8.5, high=11, step=0.01):
         table = []
         params = (float(phistar),float(mhistar),float(alpha))
-        lower = low  
-        while lower <= high: 
-            upper = lower + step
+        lower = float(low)  
+        if step < 0.001: 
+            return dict(error='step too low')
+        while lower <= float(high): 
+            upper = lower + float(step)
+            mhi = 10 ** ((lower + upper) / 2)
             integral = itg.quad(self.schechter, lower, upper, args=params)[0]
-            table.append([lower, upper, integral])
+
+            random_cos_i = random.random() * (1 - 0.12) + 0.12
+            random_inclination = acos(random_cos_i)
+            sin_angle = sin(random_inclination)
+            b_on_a = sqrt((random_cos_i ** 2) * (1 - 0.12) + 0.12)
+
+            w_e = 420 * (mhi / (10 ** 10)) ** 0.3
+            w_e_sin = w_e * sin_angle
+            guess = 20 + w_e_sin
+
+            w_theta = fsolve(self.tullyfouque, guess, args=(w_e_sin ** 2))[0]
+
+            table.append([lower, upper, integral, w_e, w_theta, b_on_a])
             lower += step
         return dict(himf=table, phistar=params[0], mhistar=params[1], alpha=params[2])
 

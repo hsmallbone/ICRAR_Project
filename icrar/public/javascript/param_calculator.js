@@ -1,11 +1,71 @@
+importScripts('/javascript/random.js', '/javascript/everpolate.min.js', '/javascript/romberg.js', '/javascript/numeric.min.js');
+onmessage = function (e) {
+	var axis_sizes = e.data.axis_sizes;
+	var input = e.data.input;
+	var data = e.data.data;
+	var axes = e.data.axes;
+	var plot_axis = e.data.plot_axis;
+	var size = axis_sizes[0].npoints * axis_sizes[1].npoints, x = new Array(size), y = new Array(size), z = new Array(size);
+	var iterations = 0;
+	for (var i = 0; i < axis_sizes[0].npoints; i++) {
+		for (var j = 0; j < axis_sizes[1].npoints; j++) {
+			var idx = i * axis_sizes[1].npoints + j;
+			x[idx] = get_axis_value(data, i, axes[0], axis_sizes[0]);
+			y[idx] = get_axis_value(data, j, axes[1], axis_sizes[1]);
+			input[axes[0]] = x[idx];
+			input[axes[1]] = y[idx];
+			var range = axes[0] === "redshift" ? axis_sizes[0] : axis_sizes[1];
+			input.last_redshift = input.redshift - (range.to - range.from)/range.npoints;
+			z[idx] = level_function(data, input, plot_axis);
+			if (iterations++ > 2000) {
+				postMessage({progress: 100 * ((i * axis_sizes[1].npoints + j) / size)});
+				iterations = 0;
+			}
+		} 
+	}
+	var res = {x: x, y: y, z: z, input: input};
+	postMessage(res);
+}
+
 var c = 299792.458;
-var omegaL = 0.7;    
 var omegaM = 0.3;
-var H0 = 70;	
+var omegaL = 1 - omegaM;
+var H0 = 70;
 var random = new Random();
-var freqHI = 1.4204 * Math.pow(10, 9);	
+var freqHI = 1.420405752 * Math.pow(10, 9);	
 var omegak = 0; // not implemented for case where omegak != 0
 	
+function get_axis_value(data, x, axis, range) {
+	var range_val = range.from + x * (range.to-range.from)/range.npoints;
+	return range_val;
+	/*if (axis === "time") {
+		return range_val;
+	} else if (axis === "area") {
+		return range_val;
+	} else if (axis === "resolution") {
+		/*var y_arr = new Array(data.telescope.params.length);
+		for (var i = 0; i < data.telescope.params.length; i++) {
+			y_arr[i] = data.telescope.params[i].beam * (1 + redshift);
+		}*/
+		/*var p = data.telescope.params;
+		var first = p[0].beam * (1 + redshift);
+		var last = p[p.length-1].beam * (1 + redshift);
+		console.log (x * (last - first)/100 + " " + data.telescope.params[x].beam * (1 + redshift));
+		return x * (last - first) / 100;*/
+		//return everpolate.linear((x / 100) * data.telescope.params_indices.length, data.telescope.params_indices, y_arr)[0];
+	/*	return data.telescope.params[x].beam;
+	} else if (axis === "nhi") {
+		return range_val;
+	} else if (axis === "redshift") {
+		/*var first = data.redshift[0];
+		var last = data.redshift[data.redshift.length - 1];
+		console.log ("r " + x * (last - first)/100);
+		return x * (last - first) / 100;*/
+		//return everpolate.linear((x / 100) * data.redshift_indices.length, data.redshift_indices, data.redshift)[0];
+	/*	return data.redshift[x];
+	}*/
+}
+
 function Einv(z) {
 	var E = Math.sqrt(omegaM * Math.pow(1 + z, 3) + omegak * Math.pow(1 + z, 2) + omegaL);
 	return 1 / E;
@@ -60,7 +120,22 @@ function get_interpolated_beamsize(obstime_sp, freqwidth, log_nhi, log_beamsize,
 	return Math.pow(10, log_syn_beamsize);
 }
 
+// root-finder for tully-fouque rotation equation. returns a new function since numericjs only accepts f(x) functions
+// abs() used since function can return negative values which uncmin would optimise for otherwise instead of trying to find the root
+function w_e_solver(w_e_sin_sq) {
+	return function (x) {
+		return Math.abs(Math.exp(Math.pow(x, 2) / 14400) * (Math.pow(x - 20, 2) - w_e_sin_sq) + 40 * (x - 20));
+	};
+}
+
 function level_function(data, input, plot_axis) {
+	if (input.omegaM) {
+		omegaM = input.omegaM;
+		omegaL = 1 - omegaM;
+	}
+	if (input.h0) {
+		H0 = input.h0;
+	}
 	var dishsize = input.dishsize || data.telescope.dishsize;
 	var fovne = input.fovne || 18;
 	var freqwidth = input.freqwidth || 50000;
@@ -68,7 +143,7 @@ function level_function(data, input, plot_axis) {
 	var z = input.z || input.redshift || 0;
 	var obstime_total = input.time || 1000;
 	var syn_beamsize = input.resolution || 5; 
-	
+
 	if (input.velwidth) {
   		freqwidth = velwidth_to_freqwidth(input.velwidth, z);
 	}
@@ -79,6 +154,10 @@ function level_function(data, input, plot_axis) {
 	    syn_beamsize = (input.resolution || 10) / (DA * (10 / 36) * (Math.PI / 180));
 	}
 
+	if (input.z) {
+		syn_beamsize *= (1 + z);
+	}
+
 	if (input.fovne) {
 		var omega_b = fovne;
 	} else {
@@ -86,15 +165,16 @@ function level_function(data, input, plot_axis) {
 	}
 	var npointings = input.area ? input.area/omega_b : 1;
 
-	var rms = new Array(data.telescope.params.length), nhi = new Array(data.telescope.params.length), beam = new Array(data.telescope.params.length),
-	log_nhi = new Array(data.telescope.params.length), log_beamsize = new Array(data.telescope.params.length), ss = new Array(data.telescope.params.length),
-	log_rms = new Array(data.telescope.params.length);
+	var rms = new Float64Array(data.telescope.params.length), nhi = new Float64Array(data.telescope.params.length), beam = new Float64Array(data.telescope.params.length),
+	log_nhi = new Float64Array(data.telescope.params.length), log_beamsize = new Float64Array(data.telescope.params.length), ss = new Float64Array(data.telescope.params.length),
+	log_rms = new Float64Array(data.telescope.params.length);
 	var Tsys = input.static_tsys || get_tsys(data, z); 
 	
+	var hr_8_to_1000_hr = Math.sqrt(1000 / 8);
 	for (var i = 0; i < data.telescope.params.length; i++) {
-		rms[i] = data.telescope.params[i].rms / Math.sqrt(1000 / 8);
-	    nhi[i] = data.telescope.params[i].nhi / Math.sqrt(1000 / 8);
-	    ss[i] = data.telescope.params[i].ss / Math.sqrt(1000 / 8);
+		rms[i] = data.telescope.params[i].rms / hr_8_to_1000_hr;
+	    nhi[i] = data.telescope.params[i].nhi / hr_8_to_1000_hr;
+	    ss[i] = data.telescope.params[i].ss / hr_8_to_1000_hr;
 	  
 	    if (z) {
 	        beam[i] = (1 + z) * data.telescope.params[i].beam;
@@ -188,63 +268,73 @@ function level_function(data, input, plot_axis) {
   		var rms_reqtime_reqwidth = Math.sqrt(1000/obstime_sp) * rms_1000hr_reqwidth;
   		return 5 * rms_reqtime_reqwidth;
 	} else if (plot_axis === "n") {
+		if (input.last_redshift === null || z === 0) {
+			return 0;
+		}
 		var table = input.schechter_himf; // array of [log_mhi_0, log_mhi_1, integral_value]
 		// equations from http://mnras.oxfordjournals.org/content/426/4/3385.full.pdf
 		// some data from http://iopscience.iop.org/article/10.1086/374944/pdf
 		var n = 0;
 		var luminosity_dist = dist_luminosity(z);
 
-		//syn_beamsize *= (1 + z);
-
 		// calculate scaled RMS from scaling relations
   		var rms_1000hr_reqwidth = Math.pow(10, everpolate.linear(Math.log10(syn_beamsize), log_beamsize, log_rms)[0]) * Math.sqrt(50000 / freqwidth);
   		var rms_reqtime_reqwidth = Math.sqrt(1000 / obstime_sp) * rms_1000hr_reqwidth;
-  		var rms_5sigma = 5 * rms_reqtime_reqwidth;
+  		var rms_5sigma = 5 * rms_reqtime_reqwidth; 
+  		if (input.fixed_rms) {
+  			rms_5sigma = input.fixed_rms;
+  		}
 
   		// velocity of channel in hz (default 50kHz)
 		var v_chan = freqwidth;
 
 		var observation_volume; // in MPC^3
-		if (!input.last_redshift) {
+		if (input.last_redshift === null) {
 			observation_volume = 0;
 		} else {
 			observation_volume = calculate_volume(input.last_redshift, z, input.area); 
 		}
-
+ 
+ 		var angular_diameter_distance_z = angular_diameter_distance(z);
 		for (var i = 0; i < table.length; i++) { 
 			var entry = table[i];
 			// use midpoint of MHI bin
 			var logmhi = (entry[1] + entry[0]) / 2;
 			var mhi = Math.pow(10, logmhi);
-
-			var random_cos_i; // choose randomly but evenly distributed over cos(i)
-			while (!random_cos_i || random_cos_i < 0.12) { // minimum of 0.12 from duffy
-				random_cos_i = random.random();
-			}
+			/*
+			// TODO: maybe assume a static average cos i to simulate a random distribution
+			var random_cos_i = random.random() * (1 - 0.12) + 0.12; // choose randomly but evenly distributed cos(i), minimum of 0.12 from duffy
 			var random_inclination = Math.acos(random_cos_i);
 			var b_on_a = Math.sqrt(Math.pow(random_cos_i, 2) * (1 - 0.12) + 0.12);
 
-			var w_e = 420 * Math.pow(mhi / Math.pow(10, 10), 0.3); // predicted velocity of galaxy from Duffy
+			var w_e = entry[3]; // predicted velocity of galaxy from Duffy
 			var v_o = 20; // approximate constant defined due to random motions in disc from Duffy
-			var w_theta = v_o + w_e * Math.sin(random_inclination); // approximate Tully-Fouque rotation scheme for W_theta >> v_c (120 km/s)
+			var w_e_sin = w_e * Math.sin(random_inclination);
+			var guess = v_o + w_e_sin; // approximate Tully-Fouque rotation scheme for W_theta >> v_c (120 km/s)
+			var w_theta = numeric.uncmin(w_e_solver(Math.pow(w_e_sin, 2)), [guess - 10]).solution; // solve full Tully-Fouque rotation equation numerically*/
+			var w_theta = entry[4];
 			var w_theta_hz = velwidth_to_freqwidth(w_theta, z); // convert to rest frame frequency width
 			
 			var nchans = (w_theta_hz / v_chan); 
 			var nchans_sqrt = Math.sqrt(nchans);
 
-			var D_HI = Math.pow(mhi / Math.pow(10, 6.8), 0.55) / Math.pow(10, 3); // mpc, normalisation mass / gamma index from Duffy
-			var angular_size = (D_HI / angular_diameter_distance(z)) * 180 / Math.PI * 60 * 60; // rearrange d_A = D_HI/theta and convert to arcseconds
-			var Agal = Math.PI * Math.pow(angular_size / 2, 2) * b_on_a;
+			var D_HI = Math.pow(mhi / Math.pow(10, 6.8), 0.55) / Math.pow(10, 3); // Mpc, normalisation mass / gamma index from Duffy
+			if(!input.logging)
+			console.log(D_HI * Math.pow(10, 3));
+
+			var angular_size = (D_HI / angular_diameter_distance_z) * (180 / Math.PI) * 60 * 60; // rearrange d_A = D_HI/theta and convert to arcseconds
+			var Agal = Math.PI * Math.pow(angular_size / 2, 2) * entry[5]; // pi * (D_HI[converted to on-sky scale] / 2)^2 * (B/A) from Duffy
+			
 			var Abeam = (Math.PI * Math.pow(syn_beamsize, 2)) / (4 * Math.log(2)); // convert beamsize in arcseconds to area
+			
 			var noise_scaling = Math.sqrt(1 + Agal / Abeam);
 
-			// the total flux of the galaxy assuming boxcar profile
-			var stot = mhi / (49.8 * Math.pow(luminosity_dist, 2));
+			var stot = mhi / (49.8 * Math.pow(luminosity_dist, 2));	// the total flux in JyHz of the galaxy assuming boxcar profile
 
-			var sigma_chan = rms_5sigma;
-			var sn = (stot / (sigma_chan * Math.pow(10, -3) * v_chan * nchans_sqrt)) / noise_scaling; // signal to noise ratio
-			var sn_lim = 5; 
-			if (false && sn > 1 && logmhi < 10) { // debug
+			var sigma_chan_jy = rms_5sigma * Math.pow(10, -3); // convert mJy to Jy
+			var sn = stot / (sigma_chan_jy * v_chan * nchans_sqrt * noise_scaling); // signal to noise ratio
+			var sn_lim = input.sn_lim || 5; 
+			if (false && sn > sn_lim && logmhi < 10) { // debug
 				console.log(
 					"z0 " + input.last_redshift +
 					"\nz1 " + z + 
@@ -264,24 +354,24 @@ function level_function(data, input, plot_axis) {
 					"\nAgal " + Agal + 
 					"\nAbeam " + Abeam + 
 					"\nnoise_scaling " + noise_scaling + 
-					"\nw_e " + w_e + 
 					"\nw_theta " + w_theta + 
 					"\nw_theta_hz " + w_theta_hz + 
 					"\nnchans " + nchans + 
 					"\nsn " + sn);
 			}
 			if (sn > sn_lim /*&& stot > sn * sigma_chan * v_chan * nchans_sqrt*/) {
-				//console.log(entry[2] + " " + observation_volume);
 				n += entry[2] * observation_volume;
 			}
 		}
+		input.logging = true;
 		return n;
 	}
 }
 
 /* 
-Returns the volume between [z, z1] using calculations from Ned Wright's
-Cosmo Calculator
+Returns the volume between [z, z1] in MPC^3 using calculations from Ned Wright's
+Cosmo Calculator.
+area is in arcseconds^2
 */
 function calculate_volume(z, z1, area) {
 	var v1 = (4 / 3 * Math.PI * Math.pow(dist_trans_comoving(z), 3));

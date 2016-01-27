@@ -1,26 +1,15 @@
 var disable_subaxis_hover;
 var fixed_subaxis_pt;
-var prev_x, prev_y, prev_z, prev_axes, prev_axes_sizes, prev_input;
+var prev_x, prev_y, prev_z, prev_axes, prev_input;
 var level_function;
+var use_physical_resolution;
 var axes = ["", ""], plot_axis;
 var possible_parameters = ["redshift", "resolution", "area", "time", "nhi"];
 var possible_plot_parameters = ["redshift", "resolution", "area", "nhi", "time", "rms", "ss", "n"];
-var schechter_params = {
-	hipass: {
-		// TODO: hipass uses hubble constant 75
-		mhistar: 9.79,
-		phistar: 0.0086,
-		alpha: -1.30
-	},
-	alfalfa: {
-		mhistar: 9.96,
-		phistar: 0.0048,
-		alpha: -1.33
-	}
-};
 var param_info = {
 	redshift: {
-		title: "Redshift"
+		title: "Redshift",
+		units: ""
 	},
 	time: {
 		title: "Time",
@@ -28,8 +17,7 @@ var param_info = {
 	}, 
 	area: {
 		title: "Area",
-		units: "Degrees^2",
-		units_html: "degrees<sup>2</sup>"
+		units: "Degrees"
 	},
 	resolution: {
 		title: "Angular Resolution",
@@ -37,20 +25,19 @@ var param_info = {
 	},
 	nhi: {
 		title: "NHI",
-		units: "log_10 cm^-2",
-		units_html: "log<sub>10</sub> cm<sup>-2</sup>"
+		units: "log_10 cm^-2"
 	},
 	ss: {
 		title: "Survey Speed",
-		units: "deg^2 mJy^-2 s^-1",
-		units_html: "deg<sup>2</sup> mJy<sup>-2</sup> s<sup>-1</sup>"
+		units: "deg^2 mJy^-2 s^-1"
 	},
 	rms: {
 		title: "RMS Noise",
 		units: "mJy"
 	},
 	n: {
-		title: "Number of galaxies"
+		title: "Number of galaxies",
+		units: ""
 	}
 }
 var telescope;
@@ -68,7 +55,32 @@ function download_data(base_filename, data, ext) {
 
 function get_axis_value(data, x, axis, range) {
 	var range_val = range.from + x * (range.to-range.from)/range.npoints;
-	return range_val;
+	if (axis === "time") {
+		return range_val;
+	} else if (axis === "area") {
+		return range_val;
+	} else if (axis === "resolution") {
+		/*var y_arr = new Array(data.telescope.params.length);
+		for (var i = 0; i < data.telescope.params.length; i++) {
+			y_arr[i] = data.telescope.params[i].beam * (1 + redshift);
+		}*/
+		/*var p = data.telescope.params;
+		var first = p[0].beam * (1 + redshift);
+		var last = p[p.length-1].beam * (1 + redshift);
+		console.log (x * (last - first)/100 + " " + data.telescope.params[x].beam * (1 + redshift));
+		return x * (last - first) / 100;*/
+		//return everpolate.linear((x / 100) * data.telescope.params_indices.length, data.telescope.params_indices, y_arr)[0];
+		return data.telescope.params[x].beam;
+	} else if (axis === "nhi") {
+		return range_val;
+	} else if (axis === "redshift") {
+		/*var first = data.redshift[0];
+		var last = data.redshift[data.redshift.length - 1];
+		console.log ("r " + x * (last - first)/100);
+		return x * (last - first) / 100;*/
+		//return everpolate.linear((x / 100) * data.redshift_indices.length, data.redshift_indices, data.redshift)[0];
+		return data.redshift[x];
+	}
 }
 
 function get_axis_title(axis) {
@@ -83,7 +95,16 @@ function get_pretty_axis_title(axis) {
 	return title;
 }
 
-function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
+function get_previous_redshift(data, redshift) {
+	for (var i = 0; i < data.redshift.length; i++) {
+		if (redshift == data.redshift[i]) {
+			return i == 0 ? null : data.redshift[i - 1];
+		}
+	}
+	return null;
+}
+
+function plot(data, fixed_input, plot_axis, axis_sizes) {
 	data.telescope.params_indices = new Array(data.telescope.params.length);
 	for (var i = 0; i < data.telescope.params.length; i++) {
 		data.telescope.params_indices[i] = i;
@@ -92,92 +113,89 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 	for (var i = 0; i < data.redshift.length; i++) {
 		data.redshift_indices[i] = i;
 	}
-	if (plot_axis === "n" && false) {
-		var x = new Array(fixed_input.schechter_himf.length), y = new Array(x.length);
-		var x2 = new Array(x.length), y2 = new Array(y.length);
-		for(var i = 0; i < x.length; i++) {
-			var e  = fixed_input.schechter_himf[i];
-			x[i] = e[0] + e[1];
-			x[i] /= 2;
-			y[i] = e[2];
-			x2[i] = x[i];
-			y2[i] = e[3];
+	var axis_size = [];
+	for (var i = 0; i < 2; i++) {
+		if (axes[i] === "resolution") {
+			axis_size.push(data.telescope.params.length);
+		} else if (axes[i] === "redshift") {
+			axis_size.push(data.redshift.length);
+		} else {
+			axis_size.push(axis_sizes[i].npoints);
 		}
-		Plotly.newPlot('schechterplot', [{x:x2,y:y2}]);
 	}
 
+	var size = axis_size[0] * axis_size[1], x = new Array(size), y = new Array(size), z = new Array(size);
 	var input = $.extend({}, fixed_input);
-	var calculator = new Worker('/javascript/param_calculator.js');
-	var progress = new Nanobar({bg: "#00CB0E"});
-	calculator.onmessage = function(e) {
-		if (e.data.progress) { 
-			progress.go(e.data.progress);
-			return;
+	input.use_physical_resolution = use_physical_resolution;  
+	for (var i = 0; i < axis_size[0]; i++) {
+		for (var j = 0; j < axis_size[1]; j++) {
+			var idx = i * axis_size[1] + j;
+			x[idx] = get_axis_value(data, i, axes[0], axis_sizes[0]);
+			y[idx] = get_axis_value(data, j, axes[1], axis_sizes[1]);
+			input[axes[0]] = x[idx];
+			input[axes[1]] = y[idx];
+			input.last_redshift = get_previous_redshift(data, input.redshift);
+			z[idx] = level_function(data, input, plot_axis);
 		}
-		progress.go(100);
-		input = e.data.input;
-		var x = e.data.x, y = e.data.y, z = e.data.z;
-		prev_input = input;
-		prev_x = x;
-		prev_y = y;
-		prev_z = z;
-		prev_axes_sizes = axis_sizes;
-		prev_axes = axes;
+	}
 
-		var pts =  [{
-					  x: x,
-					  y: y,
-					  z: z,
-					  type: 'contour'
-				    }];
+	prev_input = input;
+	prev_x = x;
+	prev_y = y;
+	prev_z = z;
+	prev_axes = axes;
 
-		var xaxis = {title: get_pretty_axis_title(axes[0])};
-		if (axes[0] !== 'redshift') {
-			xaxis.type = 'log';
-		}
-		var yaxis = {title: get_pretty_axis_title(axes[1])};
-		if (axes[1] !== 'redshift') {
-			yaxis.type = 'log';
-		}
+	var pts =  [{
+				  x: x,
+				  y: y,
+				  z: z,
+				  type: 'contour'
+			    }];
 
-		Plotly.newPlot('plot', pts, 
-		{
-			title: get_axis_title(plot_axis) + " against " + get_axis_title(axes[0]) + " and " + get_axis_title(axes[1]), 
-			xaxis: xaxis, 
-			yaxis: yaxis, 
-			zaxis: {title: plot_axis}
-		}, 
-		{
-			hovermode: '',
-			displaylogo: false, 
-			showLink: false, 
-			modeBarButtonsToRemove: ["sendDataToCloud"], 
-			modeBarButtonsToAdd: [{
-			    name: 'exportData',
-			    title: 'Export data to text',
-			    icon: Plotly.Icons.disk,
-			    click: function(gd) {
-			    	var data = "Fixed: ";
-			    	for (var prop in fixed_input) {
-			    		if (fixed_input.hasOwnProperty(prop)) {
-			    			data += prop + "\t" + fixed_input[prop] + ",";
-			    		}
-			    	}
-			    	data += "\n";
-			    	data += axes[0] + "\t" + axes[1] + "\t" + plot_axis + "\n";
-			    	for (var i = 0; i < size; i++) {
-			    		data += prev_x[i] + "\t" + prev_y[i] + "\t" + prev_z[i] + "\n";
-			    	}
-			    	download_data("icrar_contour_data", data);
-			    }
-			}], 
-			displayModeBar: true
-		});
-		$("#fix-x-opt").text("Fix " + get_axis_title(axes[0]));
-		$("#fix-y-opt").text("Fix " + get_axis_title(axes[1]));
-		cb();
-	};
-	calculator.postMessage({input: input, axis_sizes: axis_sizes, axes: axes, data: data, plot_axis: plot_axis});
+	var xaxis = {title: get_pretty_axis_title(axes[0])};
+	if (axes[0] !== 'redshift') {
+		xaxis.type = 'log';
+	}
+	var yaxis = {title: get_pretty_axis_title(axes[1])};
+	if (axes[1] !== 'redshift') {
+		yaxis.type = 'log';
+	}
+
+	Plotly.newPlot('plot', pts, 
+	{
+		title: get_axis_title(plot_axis) + " against " + get_axis_title(axes[0]) + " and " + get_axis_title(axes[1]), 
+		xaxis: xaxis, 
+		yaxis: yaxis, 
+		zaxis: {title: plot_axis}
+	}, 
+	{
+		hovermode: '',
+		displaylogo: false, 
+		showLink: false, 
+		modeBarButtonsToRemove: ["sendDataToCloud"], 
+		modeBarButtonsToAdd: [{
+		    name: 'exportData',
+		    title: 'Export data to text',
+		    icon: Plotly.Icons.disk,
+		    click: function(gd) {
+		    	var data = "Fixed: ";
+		    	for (var prop in fixed_input) {
+		    		if (fixed_input.hasOwnProperty(prop)) {
+		    			data += prop + "\t" + fixed_input[prop] + ",";
+		    		}
+		    	}
+		    	data += "\n";
+		    	data += axes[0] + "\t" + axes[1] + "\t" + plot_axis + "\n";
+		    	for (var i = 0; i < axis_size[0] * axis_size[1]; i++) {
+		    		data += prev_x[i] + "\t" + prev_y[i] + "\t" + prev_z[i] + "\n";
+		    	}
+		    	download_data("icrar_contour_data", data);
+		    }
+		}], 
+		displayModeBar: true
+	});
+	$("#fix-x-opt").text("Fix " + get_axis_title(axes[0]));
+	$("#fix-y-opt").text("Fix " + get_axis_title(axes[1]));
 }
 
 function getTelescope(name, cb) {
@@ -206,16 +224,20 @@ function validate(succ, prefix, suffix) {
 function get_axis_size_dict(n, axis) {
 	var prefix = "#axis-" + n;
 	var d = {
-		"from": parseFloat($(prefix + "-from").val()),
-		"to": parseFloat($(prefix + "-to").val()),
+		"from": parseInt($(prefix + "-from").val()),
+		"to": parseInt($(prefix + "-to").val()),
 		"npoints": parseInt($(prefix + "-npoints").val())
-	}; 
+	};
+	if (axis === "resolution" || axis === "redshift") {
+		$(prefix + "-from," + prefix + "-to," + prefix + "-npoints").parent().removeClass("has-error");
+		return d;
+	}
 	var succ = true;
-	if (!validate(!isNaN(d.from), prefix, "from")) succ = false;
-	if (!validate(!isNaN(d.npoints), prefix, "npoints")) succ = false;
-	if (!validate(!isNaN(d.to), prefix, "to")) succ = false;
-	if (!validate((d.to - d.from) > 0, prefix, ["from", "to"])) succ = false;
-	if (!succ)
+	succ &= validate(d.from, prefix, "from");
+	succ &= validate(d.npoints, prefix, "npoints");
+	succ &= validate(d.to, prefix, "to");
+	succ &= validate(d.to - d.from, prefix, ["from", "to"]);
+	if (!d.from)
 		return;
 	return d;
 }
@@ -223,24 +245,18 @@ function get_axis_size_dict(n, axis) {
 function set_opts(input, names) {
 	for (var i = 0; i < names.length; i++) {
 		var $e = $("#opt_" + names[i]);
-		var val = $e.val();
-		if (!isNaN(parseFloat(val))) {
-			val = parseFloat(val);
-		}
-		if (val) {
-			input[names[i]] = val;
+		if ($e.val()) {
+			input[names[i]] = $e.val();
 		}
 	}
 }
 
-var plotting;
 function replot(cb) {
 	var fixed_values = [parseFloat($("#fixed-1-value").val()), parseFloat($("#fixed-2-value").val())];	
 	var axis_size = [get_axis_size_dict(1, axes[0]), get_axis_size_dict(2, axes[1])];
 
 	if (!telescope || !plot_axis || (plot_axis !== "ss" && (!fixed_values[0] || !fixed_values[1])) || axes[0] === axes[1] || 
-		!axis_size[0] || !axis_size[1] || (plot_axis === "n" && !validate_schechter_params()) || plotting) return;
-	plotting = true;
+		!axis_size[0] || !axis_size[1] || (plot_axis === "n" && !validate_schechter_params())) return;
 	$("#plot_primary").prop("disabled", true);
 	var fixed_input = {};
 	var _plot = function (t) {
@@ -248,20 +264,16 @@ function replot(cb) {
 		for (var i = 0; i < 2; i++) {
 			fixed_input[fixed[i]] = fixed_values[i];
 		}
-		set_opts(fixed_input, ["dishsize", "fovne", "freqwidth", "velwidth", "sn_lim", "fixed_rms", "h0", "omegaM"]);
-		plot(t, fixed_input, plot_axis, axis_size, function() {
-			$("#plot_primary").prop("disabled", false);
-			if (cb) cb();
-			plotting = false;
-		});
+		set_opts(fixed_input, ["dishsize", "fovne", "freqwidth", "velwidth"]);
+		plot(t, fixed_input, plot_axis, axis_size);
+		$("#plot_primary").prop("disabled", false);
+		if (cb) cb();
 	};
 
 	if (plot_axis === "n") {	
 		$.getJSON("/schechter_himf" + "?phistar=" + encodeURIComponent($("#schechter-phistar").val()) 
 									+ "&mhistar=" + encodeURIComponent($("#schechter-mhistar").val()) 
 									+ "&alpha=" + encodeURIComponent($("#schechter-alpha").val())
-									+ "&low=" + encodeURIComponent($("#schechter-range-low").val() || 8.5) 
-									+ "&high=" + encodeURIComponent($("#schechter-range-high").val() || 11)
 									)
 		.done(function(data) {
 			fixed_input.schechter_himf = data.himf;
@@ -292,62 +304,55 @@ function subplot_downloader(idx, x, y) {
 	}
 }
 
-var plotting_subprobe = false;
 function replot_subprobe() {
-	if (!telescope || plotting_subprobe) return;
-	plotting_subprobe = true;
+	if (!telescope) return;
 	getTelescope(telescope, function (data) {
 		for (var i = 1; i <= 2; i++) {
-			var fixed_x = i === 1;
-			var xaxis_name = prev_axes[i % 2];
-
-			var x_idx = fixed_subaxis_pt.pointNumber[1], y_idx = fixed_subaxis_pt.pointNumber[0];
-			var size = fixed_x ? prev_axes_sizes[1].npoints : prev_axes_sizes[0].npoints; 
-
-			var x = [], y = [], both = [];
+			var source = i === 1 ? prev_y : prev_x;
+			var unique_x = {};
+			var size = source.length; 
 			for (var j = 0; j < size; j++) {
-				var idx;
-				if (fixed_x) {
-					idx = x_idx * prev_axes_sizes[1].npoints + j;
-					x.push(prev_y[idx]);
+				if (i === 1) {
+					prev_input[prev_axes[0]] = fixed_subaxis_pt.x;
+					prev_input[prev_axes[1]] = source[j];
 				} else {
-					idx = j * prev_axes_sizes[1].npoints + y_idx;
-					x.push(prev_x[idx]);
+					prev_input[prev_axes[1]] = fixed_subaxis_pt.y;
+					prev_input[prev_axes[0]] = source[j];
 				}
-				y.push(prev_z[idx]);
-				both.push([x[x.length - 1], y[y.length - 1]]);
-			}
-			var xaxis = {title: get_pretty_axis_title(xaxis_name)};
-			if (xaxis_name !== "redshift") {
-				xaxis.type = 'log';
-			}
-			var yaxis = {title: get_pretty_axis_title(plot_axis)};
-			if (plot_axis !== 'redshift') {
-				yaxis.type = 'log';
-			}
-			if (plot_axis === "n" && xaxis_name === "redshift") {
-				both.sort(function (a, b) {
-					return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0;
-				});
-				for (var j = 0; j < both.length; j++) {
-					x[j] = both[j][0];
-					y[j] = both[j][1];
-					if (j > 0) {
-						y[j] += y[j - 1];
-					}
+				prev_input.last_redshift = get_previous_redshift(data, prev_input.redshift);
+				var unique_y = level_function(data, prev_input, plot_axis);
+				if (plot_axis !== "n" && unique_x[source[j]] !== undefined && unique_x[source[j]] !== unique_y) {
+					console.log("DEGENERATE FUNCTION");
 				}
-				yaxis.title += " (cumulative)";
+				unique_x[source[j]] = unique_y;
+			}
+			var x = [];
+			var y = [];
+			for (var prop in unique_x) {
+				if (unique_x.hasOwnProperty(prop)) {
+					x.push(prop);
+					y.push(unique_x[prop]);
+				}
 			}
 			var pts = [{
 						x: x,
 						y: y,
 						mode: 'lines'
 					  }];
-			var fixed_axis_title = fixed_x ? get_axis_title(prev_axes[0]) : get_axis_title(prev_axes[1]);
-			var fixed_axis_value = fixed_x ? fixed_subaxis_pt.x : fixed_subaxis_pt.y;
+			var xaxis = {title: i === 1 ? get_pretty_axis_title(prev_axes[1]) : get_pretty_axis_title(prev_axes[0])};
+			if ((i === 1 && prev_axes[1] !== "redshift") || (i === 2 && prev_axes[0] !== "redshift")) {
+				xaxis.type = 'log';
+			}
+			var yaxis = {title: get_pretty_axis_title(plot_axis)};
+			if (plot_axis !== 'redshift') {
+				yaxis.type = 'log';
+			}
+			var fixed_axis_title = i === 1 ? get_axis_title(prev_axes[0]) : get_axis_title(prev_axes[1]);
+			var fixed_axis_value = i === 1 ? fixed_subaxis_pt.x : fixed_subaxis_pt.y;
 			Plotly.newPlot('detailPlot' + i, pts, 
 				{
-					title: get_axis_title(xaxis_name) + " with fixed " + fixed_axis_title + " at " + fixed_axis_value, 
+					title: (i === 1 ? get_axis_title(prev_axes[1]) : get_axis_title(prev_axes[0])) 
+					+ " with fixed " + fixed_axis_title + " at " + fixed_axis_value, 
 					xaxis: xaxis, 
 					yaxis: yaxis
 				}, 
@@ -363,7 +368,6 @@ function replot_subprobe() {
 					}], 
 					displayModeBar: true
 				});
-			plotting_subprobe = false;
 		}
 	});
 }
@@ -394,7 +398,11 @@ function validate_schechter_params() {
 $(function() {
 	function updateUI(changed) {
 		for (var i = 1; i <= 2; i++) {
+			var disabled = axes[i-1] === "resolution" || axes[i-1] === "redshift";
 			var prefix = "#axis-" + i;
+			var inputs = $(prefix + "-from," + prefix + "-to," + prefix + "-npoints");
+			inputs.prop('disabled', disabled);
+			if (disabled) inputs.val('');
 			var p = param_info[axes[i-1]];
 			$(prefix + "-range-title").text(p ? p.title : i === 1 ? "X axis" : "Y axis");
 		}
@@ -414,13 +422,14 @@ $(function() {
 				$(prefix + "-value").val('').attr('placeholder', get_axis_title(fixed[i - 1]));
 				
 				var $units = $(prefix + "-units");
-				var pinfo = param_info[fixed[i - 1]];
-				if (pinfo.units) {
+				if (param_info[fixed[i - 1]].units) {
 					$units.css('display', '');
-					if (pinfo.units_html) {
-						$units.html(pinfo.units_html);
+					if (fixed[i - 1] === "nhi") {
+						$units.html("log<sub>10</sub> cm<sup>-2</sup>");
+					} else if (fixed[i - 1] === "ss") {
+						$units.html("deg<sup>2</sup> mJy<sup>-2</sup> s<sup>-1</sup>");
 					} else {
-						$units.text(pinfo.units);
+						$units.text(param_info[fixed[i - 1]].units);
 					}
 				} else if (fixed[i - 1] === "redshift") {
 					$units.text("");
@@ -439,23 +448,14 @@ $(function() {
 
 		var fixed_values = [parseFloat($("#fixed-1-value").val()), parseFloat($("#fixed-2-value").val())];
 		var axis_size = [get_axis_size_dict(1, axes[0]), get_axis_size_dict(2, axes[1])];
+
 		if (!canPlot || !plot_axis || !telescope || !fixed_values[0] || !fixed_values[1] || !axis_size[0] || !axis_size[1]) {
 			$("#plot_primary").prop('disabled', true);	
 			return;	
 		}
 
 		$("#plot_primary").prop('disabled', false);
-	};
-
-	$("#schechter-select").change(function () {
-		if (!this.value) return;
-		var params = schechter_params[this.value];
-		if (!params) return;
-		$("#schechter-phistar").val(params.phistar);
-		$("#schechter-mhistar").val(params.mhistar);
-		$("#schechter-alpha").val(params.alpha);
-		updateUI("schechter-parameter");
-	});
+	}
 
 	$(".fixed-axis-input").change(function () {
 		updateUI("fixed_axis");
@@ -464,22 +464,23 @@ $(function() {
 	$("#plot").on('plotly_click', function (e, pts) {
 		disable_subaxis_hover = !disable_subaxis_hover;
 		fixed_subaxis_pt = pts.points[0];
-		replot_subprobe(); 
+		replot_subprobe();
 	});
 
-	var last_pt, next_plot = Date.now();
-	$("#plot").on('plotly_hover', function (e, pts) { 
+	var last_plotted = new Date();
+	var last_pt;
+
+	$("#plot").on('plotly_hover', function (e, pts) {
 		if (disable_subaxis_hover) 
 			return;
 		fixed_subaxis_pt = pts.points[0];
 		if (last_pt && (fixed_subaxis_pt.x === last_pt.x && fixed_subaxis_pt.y === last_pt.y))
 			return;
-		if (Date.now() < next_plot) {
-			return;
+		if (new Date() - last_plotted > 4000) {
+			replot_subprobe();
+			last_plotted = new Date();
 		}
-		replot_subprobe();
 		last_pt = fixed_subaxis_pt;
-		next_plot = Date.now() + 4000;
 	});
 
 	$(".fixed-value-container").css('display', 'none');
@@ -542,11 +543,13 @@ $(function() {
 		updateUI("schechter-parameter");
 	});
 
-	$("#opt_use_physical_resolution").change(function() {
+	$("#phys-resolution-toggle").change(function() {
 		if (this.checked) {
+			use_physical_resolution = true;
 			param_info.resolution.title = "Physical Resolution";
 			param_info.resolution.units = "Kiloparsecs";
 		} else {
+			use_physical_resolution = false;
 			param_info.resolution.title = "Angular Resolution";
 			param_info.resolution.units = "Arcseconds";
 		}
