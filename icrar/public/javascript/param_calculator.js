@@ -299,7 +299,7 @@ function level_function(data, input, plot_axis) {
  		input.b1 = input.b1 || [];
  		input.b2 = input.b2 || [];
  		input.b3 = input.b3 || [];
-		for (var i = 0; i < table.length; i++) { 
+		for (var i = 0; i < table.length; i++) {
 			var entry = table[i];
 			// use midpoint of MHI bin
 			var logmhi = (entry[1] + entry[0]) / 2;
@@ -337,9 +337,8 @@ function level_function(data, input, plot_axis) {
 
 			var sigma_chan_jy = rms_1sigma * Math.pow(10, -3); // convert mJy to Jy
 			var sn = stot / (sigma_chan_jy * v_chan * nchans_sqrt * noise_scaling); // signal to noise ratio		
-			if (bb && bb.length < table.length) {
-				input.b2.push([i, stot]);
-				input.b3.push([i, (sigma_chan_jy * v_chan * nchans_sqrt)]);
+			if (bb && input.b2.length < table.length) {
+				input.b2.push([logmhi, 0]);  
 			}
 			var sn_lim = input.sn_lim || 5; 
 			if (false && sn > sn_lim && logmhi < 10) { // debug
@@ -368,12 +367,13 @@ function level_function(data, input, plot_axis) {
 					"\nsn " + sn);
 			}
 			if (sn > sn_lim) {
-				if (z < 0.1 && input.resolution == 29.8)
-					console.log(stot + " " + noise_scaling + " " + sigma_chan_jy + " " + v_chan + " " + nchans_sqrt);	
 				n += entry[2] * observation_volume;
 				if (bb) { 
-					bb[i][1] += n; 
+					bb[i][1] += entry[2] * observation_volume; 
 				}
+			}
+			if (bb) { 
+				input.b2[i][1] += entry[2] * observation_volume; 
 			}
 		}
 		return n;

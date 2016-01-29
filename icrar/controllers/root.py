@@ -62,12 +62,17 @@ class RootController(BaseController):
         return dict(page='index', telescopes=TELESCOPES)
 
     def schechter(self, m, phistar, mhistar, alpha):
-        #frac = 10**(0.4*(m-mhistar))
-        #scaling = log(10) * 0.4 - wikipedia values differ from paper?
-        scaling = log(10)
-        frac = m / mhistar
-        return scaling * phistar * (frac ** (alpha + 1)) * exp(-frac)
-
+        frac = (0.4 * (m - mhistar))
+        scaling = log(10) * 0.4 # - wikipedia values differ from paper?
+        return scaling * phistar * (10 ** (frac * (alpha + 1))) * exp(-(10 ** frac))
+        #scaling = log(10)
+        #frac = m
+        #return scaling * phistar * (frac ** (alpha + 1)) * exp(-frac)
+        #frac = m
+        #return phistar * (frac ** alpha) * exp(-frac)
+        #dx = (log10(mhistar) - log10(m))
+        #return log10(phistar * log(10)) + (1 + alpha) * dx - log10(e) * 10 ** dx
+    
     def tullyfouque(self, x, w_e_factor): 
         v0 = 20
         return exp((x ** 2) / 14400) * (((x - v0) ** 2) - w_e_factor) + 2 * v0 * (x - v0)
@@ -82,9 +87,9 @@ class RootController(BaseController):
         while low <= high: 
             upper = low + step
             mhi = 10 ** ((low + upper) / 2)
-            print low, upper
-            integral = itg.quad(self.schechter, low, upper, args=params)[0]
 
+            integral = itg.quad(self.schechter, low, upper, args=params)[0]
+            #integral = self.schechter(mhi, params[0], params[1], params[2])
             random_cos_i = 0.12
             random_inclination = acos(random_cos_i)
             sin_angle = sin(random_inclination)
@@ -96,7 +101,7 @@ class RootController(BaseController):
 
             w_theta = fsolve(self.tullyfouque, guess, args=(w_e_sin ** 2))[0]
 
-            table.append([low, upper, integral, w_e, w_theta, b_on_a])
+            table.append([low, upper, (integral), w_e, w_theta, b_on_a])
             low += step
         return dict(himf=table, phistar=params[0], mhistar=params[1], alpha=params[2])
 
