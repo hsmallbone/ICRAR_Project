@@ -266,7 +266,7 @@ function level_function(data, input, plot_axis) {
   		var rms_1000hr_50kHz = everpolate.linear(Math.log10(syn_beamsize), log_beamsize, rms)[0];
   		var rms_1000hr_reqwidth = rms_1000hr_50kHz * Math.sqrt(50000/freqwidth);
   		var rms_reqtime_reqwidth = Math.sqrt(1000/obstime_sp) * rms_1000hr_reqwidth;
-  		return 5 * rms_reqtime_reqwidth;
+  		return rms_reqtime_reqwidth;
 	} else if (plot_axis === "n") {
 		if (input.last_redshift === null || z === 0) {
 			return 0;
@@ -280,9 +280,9 @@ function level_function(data, input, plot_axis) {
 		// calculate scaled RMS from scaling relations
   		var rms_1000hr_reqwidth = Math.pow(10, everpolate.linear(Math.log10(syn_beamsize), log_beamsize, log_rms)[0]) * Math.sqrt(50000 / freqwidth);
   		var rms_reqtime_reqwidth = Math.sqrt(1000 / obstime_sp) * rms_1000hr_reqwidth;
-  		var rms_5sigma = 5 * rms_reqtime_reqwidth; 
+  		var rms_1sigma = rms_reqtime_reqwidth; 
   		if (input.fixed_rms) {
-  			rms_5sigma = input.fixed_rms;
+  			rms_1sigma = input.fixed_rms;
   		}
 
   		// velocity of channel in hz (default 50kHz)
@@ -296,6 +296,9 @@ function level_function(data, input, plot_axis) {
 		}
  
  		var angular_diameter_distance_z = angular_diameter_distance(z);
+ 		input.b1 = input.b1 || [];
+ 		input.b2 = input.b2 || [];
+ 		input.b3 = input.b3 || [];
 		for (var i = 0; i < table.length; i++) { 
 			var entry = table[i];
 			// use midpoint of MHI bin
@@ -315,24 +318,29 @@ function level_function(data, input, plot_axis) {
 			var w_theta = entry[4];
 			var w_theta_hz = velwidth_to_freqwidth(w_theta, z); // convert to rest frame frequency width
 			
-			var nchans = (w_theta_hz / v_chan); 
+			var nchans = w_theta_hz / v_chan; 
 			var nchans_sqrt = Math.sqrt(nchans);
 
-			var D_HI = Math.pow(mhi / Math.pow(10, 6.8), 0.55) / Math.pow(10, 3); // Mpc, normalisation mass / gamma index from Duffy
-			if(!input.logging)
-			console.log(D_HI * Math.pow(10, 3));
+			var D_HI = Math.pow(mhi / Math.pow(10, 6.8), 0.55) / Math.pow(10, 3); // Mpc, normalisation mass / gamma index from Duffy			
+			var bb = input.resolution != 29.8 ? null : z < 0.1 ? input.b1 : null; //: z < 0.2 ? input.b2 : z < 0.26 ? input.b3 : null;
+			if (bb && bb.length < table.length) {
+				bb.push([logmhi, 0]);  
+			}
 
 			var angular_size = (D_HI / angular_diameter_distance_z) * (180 / Math.PI) * 60 * 60; // rearrange d_A = D_HI/theta and convert to arcseconds
 			var Agal = Math.PI * Math.pow(angular_size / 2, 2) * entry[5]; // pi * (D_HI[converted to on-sky scale] / 2)^2 * (B/A) from Duffy
 			
 			var Abeam = (Math.PI * Math.pow(syn_beamsize, 2)) / (4 * Math.log(2)); // convert beamsize in arcseconds to area
 			
-			var noise_scaling = Math.sqrt(1 + Agal / Abeam);
+			var noise_scaling = Math.sqrt(1 + Agal / Abeam); 
+			var stot = (mhi / 49.8) * Math.pow(luminosity_dist, -2); // the total flux in JyHz of the galaxy assuming boxcar profile
 
-			var stot = mhi / (49.8 * Math.pow(luminosity_dist, 2));	// the total flux in JyHz of the galaxy assuming boxcar profile
-
-			var sigma_chan_jy = rms_5sigma * Math.pow(10, -3); // convert mJy to Jy
-			var sn = stot / (sigma_chan_jy * v_chan * nchans_sqrt * noise_scaling); // signal to noise ratio
+			var sigma_chan_jy = rms_1sigma * Math.pow(10, -3); // convert mJy to Jy
+			var sn = stot / (sigma_chan_jy * v_chan * nchans_sqrt * noise_scaling); // signal to noise ratio		
+			if (bb && bb.length < table.length) {
+				input.b2.push([i, stot]);
+				input.b3.push([i, (sigma_chan_jy * v_chan * nchans_sqrt)]);
+			}
 			var sn_lim = input.sn_lim || 5; 
 			if (false && sn > sn_lim && logmhi < 10) { // debug
 				console.log(
@@ -359,22 +367,26 @@ function level_function(data, input, plot_axis) {
 					"\nnchans " + nchans + 
 					"\nsn " + sn);
 			}
-			if (sn > sn_lim /*&& stot > sn * sigma_chan * v_chan * nchans_sqrt*/) {
+			if (sn > sn_lim) {
+				if (z < 0.1 && input.resolution == 29.8)
+					console.log(stot + " " + noise_scaling + " " + sigma_chan_jy + " " + v_chan + " " + nchans_sqrt);	
 				n += entry[2] * observation_volume;
+				if (bb) { 
+					bb[i][1] += n; 
+				}
 			}
 		}
-		input.logging = true;
 		return n;
 	}
 }
 
 /* 
-Returns the volume between [z, z1] in MPC^3 using calculations from Ned Wright's
+Returns the comoving volume between [z, z1] in MPC^3 using calculations from Ned Wright's
 Cosmo Calculator.
 area is in arcseconds^2
 */
 function calculate_volume(z, z1, area) {
-	var v1 = (4 / 3 * Math.PI * Math.pow(dist_trans_comoving(z), 3));
-	var v2 = (4 / 3 * Math.PI * Math.pow(dist_trans_comoving(z1), 3));
+	var v1 = ((4 / 3) * Math.PI * Math.pow(dist_trans_comoving(z), 3));
+	var v2 = ((4 / 3) * Math.PI * Math.pow(dist_trans_comoving(z1), 3));
 	return ((v2 - v1) * area * Math.PI) / 129600; // in MPC^3
 }

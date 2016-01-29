@@ -10,9 +10,11 @@ var schechter_params = {
 		// TODO: hipass uses hubble constant 75
 		mhistar: 9.79,
 		phistar: 0.0086,
-		alpha: -1.30
+		alpha: -1.30,
+		h0: 75
 	},
 	alfalfa: {
+		h0: 70,
 		mhistar: 9.96,
 		phistar: 0.0048,
 		alpha: -1.33
@@ -98,10 +100,9 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 		for(var i = 0; i < x.length; i++) {
 			var e  = fixed_input.schechter_himf[i];
 			x[i] = e[0] + e[1];
-			x[i] /= 2;
-			y[i] = e[2];
+			x[i] /= 2; 
 			x2[i] = x[i];
-			y2[i] = e[3];
+			y2[i] = e[2];
 		}
 		Plotly.newPlot('schechterplot', [{x:x2,y:y2}]);
 	}
@@ -117,6 +118,23 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 		progress.go(100);
 		input = e.data.input;
 		var x = e.data.x, y = e.data.y, z = e.data.z;
+
+		if (plot_axis === "n") {
+			var ccc = [];
+			var xx, yy;
+			for (var j = 1; j <= 1; j++) {
+				var bb = input["b" + j];
+				xx = new Array(bb.length), yy = new Array(xx.length);  
+				for(var i = 0; i < xx.length; i++) { 
+					xx[i] = (bb[i][0]);
+					yy[i] = bb[i][1] === 0 ? 0 : (bb[i][1]);  	
+				}  
+				ccc.push({x: xx, y: yy});
+			}
+			console.log(ccc);
+			Plotly.newPlot('schechterplot', ccc, {xaxis: {title: "log D_HI (kpc)"}, yaxis: {title: "log N"}});
+		}
+
 		prev_input = input;
 		prev_x = x;
 		prev_y = y;
@@ -262,6 +280,8 @@ function replot(cb) {
 									+ "&alpha=" + encodeURIComponent($("#schechter-alpha").val())
 									+ "&low=" + encodeURIComponent($("#schechter-range-low").val() || 8.5) 
 									+ "&high=" + encodeURIComponent($("#schechter-range-high").val() || 11)
+									+ "&h0=" + encodeURIComponent($("#schechter-h0").val())
+									+ "&h0new=" + encodeURIComponent($("#opt_h0").val() || 70)
 									)
 		.done(function(data) {
 			fixed_input.schechter_himf = data.himf;
@@ -454,6 +474,7 @@ $(function() {
 		$("#schechter-phistar").val(params.phistar);
 		$("#schechter-mhistar").val(params.mhistar);
 		$("#schechter-alpha").val(params.alpha);
+		$("#schechter-h0").val(params.h0);
 		updateUI("schechter-parameter");
 	});
 

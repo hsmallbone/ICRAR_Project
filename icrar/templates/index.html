@@ -80,8 +80,8 @@
 			</select>
 		</div>
 	</div>
-	<div class="row form-group schechter-parameters" style="display: none">
-		<p class="col-lg-1 form-control-static">Schechter HI mass function</p>
+	<div class="row schechter-parameters" style="display: none">
+		<p class="col-lg-1 form-control-static">Schechter HIMF</p>
 		<div class="col-lg-2">
 			<input type="text" class="schechter-parameter form-control" id="schechter-phistar" placeholder="Phi star"/>
 		</div>
@@ -97,6 +97,11 @@
 				<option value="hipass">HIPASS</option>
 				<option value="alfalfa">ALFALFA</option>
 			</select>
+		</div>
+	</div>
+	<div class="row form-group schechter-parameters" style="display: none">
+		<div class="col-lg-offset-1 col-lg-2">
+			<input type="text" class="schechter-parameter form-control" id="schechter-h0" placeholder="Hubble constant"/>
 		</div>
 	</div>
 	<div class="row">
@@ -161,7 +166,7 @@
 								<div class="col-lg-6"><input type="text" class="form-control" id="opt_freqwidth" placeholder="Frequency width (Hz)" value="100000"/></div>
 								<div class="col-lg-6"><input type="text" class="form-control" id="opt_velwidth" placeholder="Velocity width (km/s)"/></div> 
 							</div>
-							<div class="form-group"><input type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)" value="3.405"/></div>
+							<div class="form-group"><input type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)" value="0.681"/></div>
 							<h4>Cosmology</h4>
 							<div class="row form-group">
 								<div class="col-lg-6"><input type="text" class="form-control" id="opt_h0" placeholder="Hubble constant" value="70"/></div>

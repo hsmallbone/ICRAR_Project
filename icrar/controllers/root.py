@@ -66,25 +66,26 @@ class RootController(BaseController):
         #scaling = log(10) * 0.4 - wikipedia values differ from paper?
         scaling = log(10)
         frac = m / mhistar
-        return scaling * phistar * frac ** (alpha + 1) * exp(-frac)
+        return scaling * phistar * (frac ** (alpha + 1)) * exp(-frac)
 
     def tullyfouque(self, x, w_e_factor): 
         v0 = 20
-        return exp(x ** 2 / 14400) * ((x - v0) ** 2 - w_e_factor) + 2 * v0 * (x - v0)
+        return exp((x ** 2) / 14400) * (((x - v0) ** 2) - w_e_factor) + 2 * v0 * (x - v0)
 
     @expose('json')
-    def schechter_himf(self, phistar, mhistar, alpha, low=8.5, high=11, step=0.01):
+    def schechter_himf(self, phistar, mhistar, alpha, h0=70, h0new=70, low=8.5, high=11, step=0.01):
         table = []
-        params = (float(phistar),float(mhistar),float(alpha))
-        lower = float(low)  
+        (h0, h0new, low, high, step) = (float(h0), float(h0new), float(low), float(high), float(step))
         if step < 0.001: 
             return dict(error='step too low')
-        while lower <= float(high): 
-            upper = lower + float(step)
-            mhi = 10 ** ((lower + upper) / 2)
-            integral = itg.quad(self.schechter, lower, upper, args=params)[0]
+        params = (float(phistar) * ((h0new / h0) ** 3), float(mhistar) * ((h0new / h0) ** -2), float(alpha))
+        while low <= high: 
+            upper = low + step
+            mhi = 10 ** ((low + upper) / 2)
+            print low, upper
+            integral = itg.quad(self.schechter, low, upper, args=params)[0]
 
-            random_cos_i = random.random() * (1 - 0.12) + 0.12
+            random_cos_i = 0.12
             random_inclination = acos(random_cos_i)
             sin_angle = sin(random_inclination)
             b_on_a = sqrt((random_cos_i ** 2) * (1 - 0.12) + 0.12)
@@ -95,8 +96,8 @@ class RootController(BaseController):
 
             w_theta = fsolve(self.tullyfouque, guess, args=(w_e_sin ** 2))[0]
 
-            table.append([lower, upper, integral, w_e, w_theta, b_on_a])
-            lower += step
+            table.append([low, upper, integral, w_e, w_theta, b_on_a])
+            low += step
         return dict(himf=table, phistar=params[0], mhistar=params[1], alpha=params[2])
 
     @expose('json')
