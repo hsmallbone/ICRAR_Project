@@ -1,4 +1,5 @@
 *.py[co]
+*.pyc
 
 # Default development database
 devdata.db
