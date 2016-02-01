@@ -62,12 +62,12 @@ class RootController(BaseController):
         return dict(page='index', telescopes=TELESCOPES)
 
     def schechter(self, m, phistar, mhistar, alpha):
-        frac = (0.4 * (m - mhistar))
-        scaling = log(10) * 0.4 # - wikipedia values differ from paper?
-        return scaling * phistar * (10 ** (frac * (alpha + 1))) * exp(-(10 ** frac))
-        #scaling = log(10)
-        #frac = m
-        #return scaling * phistar * (frac ** (alpha + 1)) * exp(-frac)
+        #frac = (0.4 * (m - mhistar))
+        #scaling = log(10) * 0.4 # - wikipedia values differ from paper?
+        #return scaling * phistar * (10 ** (frac * (alpha + 1))) * exp(-(10 ** frac))
+        scaling = log(10)
+        frac = 10 ** m/mhistar
+        return scaling * phistar * (frac ** (alpha + 1)) * exp(-frac)
         #frac = m
         #return phistar * (frac ** alpha) * exp(-frac)
         #dx = (log10(mhistar) - log10(m))
@@ -83,7 +83,7 @@ class RootController(BaseController):
         (h0, h0new, low, high, step) = (float(h0), float(h0new), float(low), float(high), float(step))
         if step < 0.001: 
             return dict(error='step too low')
-        params = (float(phistar) * ((h0new / h0) ** 3), float(mhistar) * ((h0new / h0) ** -2), float(alpha))
+        params = (float(phistar) * ((h0new / h0) ** 3), 10 ** (float(mhistar) * ((h0new / h0) ** -2)), float(alpha))
         while low <= high: 
             upper = low + step
             mhi = 10 ** ((low + upper) / 2)

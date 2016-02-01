@@ -322,7 +322,7 @@ function level_function(data, input, plot_axis) {
 			var nchans_sqrt = Math.sqrt(nchans);
 
 			var D_HI = Math.pow(mhi / Math.pow(10, 6.8), 0.55) / Math.pow(10, 3); // Mpc, normalisation mass / gamma index from Duffy			
-			var bb = input.resolution != 29.8 ? null : z < 0.1 ? input.b1 : null; //: z < 0.2 ? input.b2 : z < 0.26 ? input.b3 : null;
+			var bb = input.resolution != 29.8 ? null : z < 0.26 ? input.b1 : null; //: z < 0.2 ? input.b2 : z < 0.26 ? input.b3 : null;
 			if (bb && bb.length < table.length) {
 				bb.push([logmhi, 0]);  
 			}
@@ -374,7 +374,7 @@ function level_function(data, input, plot_axis) {
 			}
 			if (bb) { 
 				input.b2[i][1] += entry[2] * observation_volume; 
-			}
+			} 
 		}
 		return n;
 	}
