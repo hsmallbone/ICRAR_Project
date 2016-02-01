@@ -61,17 +61,24 @@ class RootController(BaseController):
         """Handle the front-page."""
         return dict(page='index', telescopes=TELESCOPES)
 
+    def schechter_astropysics(self, m, phistar, mhistar, alpha):
+        frac = (0.4 * (m - mhistar))
+        scaling = log(10) * 0.4
+        return scaling * phistar * (10 ** (frac * (alpha + 1))) * exp(-(10 ** frac))
+
+    def schechter_real(self, m, phistar, mhistar, alpha):
+        frac = m/mhistar
+        return phistar * (frac ** alpha) * exp(-frac)
+
+    # From martin
+    def schechter_alternative(self, m, phistar, mhistar, alpha):
+        dx = (log10(mhistar) - log10(m))
+        return log10(phistar * log(10)) + (1 + alpha) * dx - log10(e) * 10 ** dx
+
     def schechter(self, m, phistar, mhistar, alpha):
-        #frac = (0.4 * (m - mhistar))
-        #scaling = log(10) * 0.4 # - wikipedia values differ from paper?
-        #return scaling * phistar * (10 ** (frac * (alpha + 1))) * exp(-(10 ** frac))
         scaling = log(10)
         frac = 10 ** m/mhistar
-        return scaling * phistar * (frac ** (alpha + 1)) * exp(-frac)
-        #frac = m
-        #return phistar * (frac ** alpha) * exp(-frac)
-        #dx = (log10(mhistar) - log10(m))
-        #return log10(phistar * log(10)) + (1 + alpha) * dx - log10(e) * 10 ** dx
+        return scaling * phistar * (frac ** (alpha + 1)) * exp(-frac) 
     
     def tullyfouque(self, x, w_e_factor): 
         v0 = 20
@@ -85,23 +92,22 @@ class RootController(BaseController):
             return dict(error='step too low')
         params = (float(phistar) * ((h0new / h0) ** 3), 10 ** (float(mhistar) * ((h0new / h0) ** -2)), float(alpha))
         while low <= high: 
-            upper = low + step
+            upper = low + step # for each mass bin
             mhi = 10 ** ((low + upper) / 2)
 
             integral = itg.quad(self.schechter, low, upper, args=params)[0]
-            #integral = self.schechter(mhi, params[0], params[1], params[2])
             random_cos_i = 0.12
             random_inclination = acos(random_cos_i)
             sin_angle = sin(random_inclination)
-            b_on_a = sqrt((random_cos_i ** 2) * (1 - 0.12) + 0.12)
+            b_on_a = sqrt((random_cos_i ** 2) * (1 - 0.12) + 0.12) # calculate B/A for 'random' inclination
 
-            w_e = 420 * (mhi / (10 ** 10)) ** 0.3
+            w_e = 420 * (mhi / (10 ** 10)) ** 0.3 # scaling relation from Duffy et al. 2012 and assumes no variation in w_e
             w_e_sin = w_e * sin_angle
-            guess = 20 + w_e_sin
+            guess = 20 + w_e_sin # approximation for w_e >> V_o (120 km/s), used starting point for fsolve
 
-            w_theta = fsolve(self.tullyfouque, guess, args=(w_e_sin ** 2))[0]
+            w_theta = fsolve(self.tullyfouque, guess, args=(w_e_sin ** 2))[0] # numerically solve tully-fouque
 
-            table.append([low, upper, (integral), w_e, w_theta, b_on_a])
+            table.append([low, upper, integral, w_e, w_theta, b_on_a])
             low += step
         return dict(himf=table, phistar=params[0], mhistar=params[1], alpha=params[2])
 
@@ -111,4 +117,3 @@ class RootController(BaseController):
         if telescope not in TELESCOPES:
             return dict()
         return dict(telescope=TELESCOPES[telescope], redshift=REDSHIFT, tsys=TSYS, himf_swml=HI_MASS_FUNCTION_SWML)
-

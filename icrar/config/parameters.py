@@ -38,7 +38,7 @@ def load_2dswml_himassfunction(f):
 
 import os, tg
 config_dir = os.path.join(tg.config['paths']['root'], 'config')
-HI_MASS_FUNCTION_SWML = load_2dswml_himassfunction(os.path.join(config_dir,'swmlphi_2d.txt'))
+HI_MASS_FUNCTION_SWML = load_2dswml_himassfunction(os.path.join(config_dir, 'swmlphi_2d.txt'))
 SKA_MID = load_parameters(os.path.join(config_dir,'ska-mid.telescope'))
 MEERKAT = load_parameters(os.path.join(config_dir,'meerkat.telescope'))
 ASKAP30 = load_parameters(os.path.join(config_dir,'askap30.telescope'))
@@ -50,10 +50,10 @@ with open(os.path.join(config_dir, 'tsys.cfg')) as f:
 	for line in f:
 		(freq, ae_tsys) = line.split('\t')
 		(freq, ae_tsys) = (float(freq), float(ae_tsys))
-		z = (rest_freq/freq) - 1
+		z = (rest_freq / freq) - 1
 		if z < 0:
 			continue
-		tsys = ae/ae_tsys
+		tsys = ae / ae_tsys
 		REDSHIFT.append(z)
 		TSYS.append(tsys)
 	REDSHIFT.reverse()

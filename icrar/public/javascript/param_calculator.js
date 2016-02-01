@@ -27,6 +27,8 @@ onmessage = function (e) {
 	postMessage(res);
 }
 
+// cosmology default values
+
 var c = 299792.458;
 var omegaM = 0.3;
 var omegaL = 1 - omegaM;
@@ -34,38 +36,29 @@ var H0 = 70;
 var random = new Random();
 var freqHI = 1.420405752 * Math.pow(10, 9);	
 var omegak = 0; // not implemented for case where omegak != 0
-	
+
+/*
+Interpolates linearly between a range of values for a given `x` index.
+
+Parameters:
+data: The telescope data from the server
+x: The index within the range to interpolate with
+axis: The plot axis as a string, e.g. "area", "time", "nhi"
+range: An object describing the range in form:
+{
+	to,
+	from,
+	npoints
+}
+*/
 function get_axis_value(data, x, axis, range) {
-	var range_val = range.from + x * (range.to-range.from)/range.npoints;
+	var range_val = range.from + x * (range.to - range.from)/range.npoints;
 	return range_val;
-	/*if (axis === "time") {
-		return range_val;
-	} else if (axis === "area") {
-		return range_val;
-	} else if (axis === "resolution") {
-		/*var y_arr = new Array(data.telescope.params.length);
-		for (var i = 0; i < data.telescope.params.length; i++) {
-			y_arr[i] = data.telescope.params[i].beam * (1 + redshift);
-		}*/
-		/*var p = data.telescope.params;
-		var first = p[0].beam * (1 + redshift);
-		var last = p[p.length-1].beam * (1 + redshift);
-		console.log (x * (last - first)/100 + " " + data.telescope.params[x].beam * (1 + redshift));
-		return x * (last - first) / 100;*/
-		//return everpolate.linear((x / 100) * data.telescope.params_indices.length, data.telescope.params_indices, y_arr)[0];
-	/*	return data.telescope.params[x].beam;
-	} else if (axis === "nhi") {
-		return range_val;
-	} else if (axis === "redshift") {
-		/*var first = data.redshift[0];
-		var last = data.redshift[data.redshift.length - 1];
-		console.log ("r " + x * (last - first)/100);
-		return x * (last - first) / 100;*/
-		//return everpolate.linear((x / 100) * data.redshift_indices.length, data.redshift_indices, data.redshift)[0];
-	/*	return data.redshift[x];
-	}*/
 }
 
+/*
+Inverse E function for the romberg integral
+*/
 function Einv(z) {
 	var E = Math.sqrt(omegaM * Math.pow(1 + z, 3) + omegak * Math.pow(1 + z, 2) + omegaL);
 	return 1 / E;
@@ -85,6 +78,9 @@ function angular_diameter_distance(z) {
 	return dist_trans_comoving(z) / (1 + z);
 }
 
+/*
+Interpolates a tsys value given the telescope Tsys curve in `data` and a specific redshift
+*/
 function get_tsys(data, redshift) {
 	return everpolate.linear(redshift, data.redshift, data.tsys)[0];
 }
@@ -110,6 +106,9 @@ function velwidth_to_freqwidth(velwidth, z) {
 	return velwidth * freqHI / (c * (1 + z));
 }
 
+/*
+Interpolates a synthetic beamsize for a given observation time and frequency width.
+*/
 function get_interpolated_beamsize(obstime_sp, freqwidth, log_nhi, log_beamsize, nhi_reqtime_reqwidth) {
 	var nhi_1000hr_reqwidth = 0.5 * Math.log10(obstime_sp / 1000) + nhi_reqtime_reqwidth; 
 	var nhi_1000hr_50kHz = nhi_1000hr_reqwidth - Math.log10(Math.sqrt(freqwidth / 50000));
@@ -120,15 +119,10 @@ function get_interpolated_beamsize(obstime_sp, freqwidth, log_nhi, log_beamsize,
 	return Math.pow(10, log_syn_beamsize);
 }
 
-// root-finder for tully-fouque rotation equation. returns a new function since numericjs only accepts f(x) functions
-// abs() used since function can return negative values which uncmin would optimise for otherwise instead of trying to find the root
-function w_e_solver(w_e_sin_sq) {
-	return function (x) {
-		return Math.abs(Math.exp(Math.pow(x, 2) / 14400) * (Math.pow(x - 20, 2) - w_e_sin_sq) + 40 * (x - 20));
-	};
-}
-
 function level_function(data, input, plot_axis) {
+	/*
+	Initial setup of variables
+	*/
 	if (input.omegaM) {
 		omegaM = input.omegaM;
 		omegaL = 1 - omegaM;
@@ -171,6 +165,7 @@ function level_function(data, input, plot_axis) {
 	var Tsys = input.static_tsys || get_tsys(data, z); 
 	
 	var hr_8_to_1000_hr = Math.sqrt(1000 / 8);
+	// Create interpolation tables for given redshift
 	for (var i = 0; i < data.telescope.params.length; i++) {
 		rms[i] = data.telescope.params[i].rms / hr_8_to_1000_hr;
 	    nhi[i] = data.telescope.params[i].nhi / hr_8_to_1000_hr;
@@ -201,6 +196,7 @@ function level_function(data, input, plot_axis) {
 		obstime_sp = obstime_total / npointings;
 	}
 
+	// Calculate the return value depending on the z value we are plotting with
 	if (plot_axis === "area") {
 		return (obstime_total / obstime_sp) * omega_b;
 	} else if (plot_axis === "time") {
@@ -218,10 +214,10 @@ function level_function(data, input, plot_axis) {
 		var beamsize_z0 = beam.slice();
 		var rms_z0 = rms.slice();
 		var nhi_z0 = nhi.slice();
-	 
+
 		for (var z = 0; z < 20; z += 0.01) {
 		    var z_max = z;
-		    var Tsys = input.static_tsys ? input.static_tsys : get_tsys(data, z);
+		    var Tsys = input.static_tsys || get_tsys(data, z);
 		    for (var i = 0; i < beamsize_z0.length; i++) {
 		    	beam[i] = (1 + z) * beamsize_z0[i];
 		    	rms[i] = Tsys * rms_z0[i];
@@ -243,7 +239,7 @@ function level_function(data, input, plot_axis) {
 		    }
 		    var npointings = input.area ? input.area/omega_b : 1;
 		  
-		    var obstime_sp = obstime_total/npointings; 
+		    var obstime_sp = obstime_total / npointings; 
 		    var nhi_1000hr_reqwidth = 0.5 * Math.log10(obstime_sp / 1000) + nhi_reqtime_reqwidth; 
 		    var nhi_1000hr_50kHz = nhi_1000hr_reqwidth - Math.log10(Math.sqrt(freqwidth / 50000));
 		    var nhi_1000hr_50kHz_possible = everpolate.linear(log_syn_beamsize, log_beamsize, log_nhi)[0];
@@ -304,18 +300,8 @@ function level_function(data, input, plot_axis) {
 			// use midpoint of MHI bin
 			var logmhi = (entry[1] + entry[0]) / 2;
 			var mhi = Math.pow(10, logmhi);
-			/*
-			// TODO: maybe assume a static average cos i to simulate a random distribution
-			var random_cos_i = random.random() * (1 - 0.12) + 0.12; // choose randomly but evenly distributed cos(i), minimum of 0.12 from duffy
-			var random_inclination = Math.acos(random_cos_i);
-			var b_on_a = Math.sqrt(Math.pow(random_cos_i, 2) * (1 - 0.12) + 0.12);
-
-			var w_e = entry[3]; // predicted velocity of galaxy from Duffy
-			var v_o = 20; // approximate constant defined due to random motions in disc from Duffy
-			var w_e_sin = w_e * Math.sin(random_inclination);
-			var guess = v_o + w_e_sin; // approximate Tully-Fouque rotation scheme for W_theta >> v_c (120 km/s)
-			var w_theta = numeric.uncmin(w_e_solver(Math.pow(w_e_sin, 2)), [guess - 10]).solution; // solve full Tully-Fouque rotation equation numerically*/
-			var w_theta = entry[4];
+	
+			var w_theta = entry[4]; // calculated w_theta is taken from server's random distribution
 			var w_theta_hz = velwidth_to_freqwidth(w_theta, z); // convert to rest frame frequency width
 			
 			var nchans = w_theta_hz / v_chan; 

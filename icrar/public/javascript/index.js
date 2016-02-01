@@ -1,13 +1,11 @@
 var disable_subaxis_hover;
 var fixed_subaxis_pt;
-var prev_x, prev_y, prev_z, prev_axes, prev_axes_sizes, prev_input;
-var level_function;
+var prev_x, prev_y, prev_z, prev_axes, prev_axes_sizes, prev_input; 
 var axes = ["", ""], plot_axis;
-var possible_parameters = ["redshift", "resolution", "area", "time", "nhi"];
-var possible_plot_parameters = ["redshift", "resolution", "area", "nhi", "time", "rms", "ss", "n"];
-var schechter_params = {
+var possible_parameters = ["redshift", "resolution", "area", "time", "nhi"]; // Available axes
+var possible_plot_parameters = ["redshift", "resolution", "area", "nhi", "time", "rms", "ss", "n"]; // Parameters that can be plotted 
+var schechter_params = { // Schechter parameter values from previous survey papers
 	hipass: {
-		// TODO: hipass uses hubble constant 75
 		mhistar: 9.79,
 		phistar: 0.0086,
 		alpha: -1.30,
@@ -20,6 +18,7 @@ var schechter_params = {
 		alpha: -1.33
 	}
 };
+// Parameter axis titles etc.
 var param_info = {
 	redshift: {
 		title: "Redshift"
@@ -55,9 +54,12 @@ var param_info = {
 		title: "Number of galaxies"
 	}
 }
-var telescope;
+var telescope; // current telescope downlaoded from server
 var cached_telescopes = {};
 
+/*
+Helper function to download a string as a file for the user
+*/
 function download_data(base_filename, data, ext) {
 	var elem = document.createElement('a');
 	elem.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(data));
@@ -69,7 +71,7 @@ function download_data(base_filename, data, ext) {
 }
 
 function get_axis_value(data, x, axis, range) {
-	var range_val = range.from + x * (range.to-range.from)/range.npoints;
+	var range_val = range.from + x * (range.to - range.from) / range.npoints;
 	return range_val;
 }
 
@@ -77,6 +79,9 @@ function get_axis_title(axis) {
 	return param_info[axis].title;
 }
 
+/*
+Returns the axis title with units as applicable
+*/
 function get_pretty_axis_title(axis) {
 	var title = get_axis_title(axis);
 	if (param_info[axis].units) {
@@ -85,7 +90,11 @@ function get_pretty_axis_title(axis) {
 	return title;
 }
 
+/*
+The main plotting function, taking telescope data, fixed input, the axis to plot against and axis sizes, and a callback
+*/
 function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
+	// For interpolation purposes, create a mapping of index->index to save repopulation later
 	data.telescope.params_indices = new Array(data.telescope.params.length);
 	for (var i = 0; i < data.telescope.params.length; i++) {
 		data.telescope.params_indices[i] = i;
@@ -107,9 +116,9 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 		Plotly.newPlot('schechterplot', [{x:x2,y:y2}]);
 	}
 
-	var input = $.extend({}, fixed_input);
-	var calculator = new Worker('/javascript/param_calculator.js');
-	var progress = new Nanobar({bg: "#00CB0E"});
+	var input = $.extend({}, fixed_input); // copy fixed input array
+	var calculator = new Worker('/javascript/param_calculator.js'); // calculate the actual data in a web worker to avoid locking up the main thread
+	var progress = new Nanobar({bg: "#00CB0E"}); // use the nanobar library for progress indication
 	calculator.onmessage = function(e) {
 		if (e.data.progress) { 
 			progress.go(e.data.progress);
@@ -198,7 +207,10 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 	calculator.postMessage({input: input, axis_sizes: axis_sizes, axes: axes, data: data, plot_axis: plot_axis});
 }
 
-function getTelescope(name, cb) {
+/*
+Returns telescope data such as Tsys/redshift curves from the server.
+*/
+function getTelescopeData(name, cb) {
 	if (cached_telescopes[name]) { cb(cached_telescopes[name]); }
 	$.getJSON("/telescope_parameters?telescope=" + encodeURIComponent(name))
 	.done(function(data) {
@@ -210,6 +222,9 @@ function getTelescope(name, cb) {
 	});
 }
 
+/*
+Given a boolean variable in succ, sets Bootstrap error states on the given prefix and suffix DOM elements.
+*/
 function validate(succ, prefix, suffix) {
 	if (!(suffix instanceof Array)) {
 		suffix = [suffix];
@@ -221,6 +236,9 @@ function validate(succ, prefix, suffix) {
 	return succ;
 }
 
+/*
+Validates user input and returns an axis size {from, to, npoints} if valid, or null if not valid
+*/
 function get_axis_size_dict(n, axis) {
 	var prefix = "#axis-" + n;
 	var d = {
@@ -253,13 +271,14 @@ function set_opts(input, names) {
 
 var plotting;
 function replot(cb) {
+	if (plotting) return;
+	plotting = true;
+
 	var fixed_values = [parseFloat($("#fixed-1-value").val()), parseFloat($("#fixed-2-value").val())];	
 	var axis_size = [get_axis_size_dict(1, axes[0]), get_axis_size_dict(2, axes[1])];
 
-	if (!telescope || !plot_axis || (plot_axis !== "ss" && (!fixed_values[0] || !fixed_values[1])) || axes[0] === axes[1] || 
-		!axis_size[0] || !axis_size[1] || (plot_axis === "n" && !validate_schechter_params()) || plotting) return;
-	plotting = true;
 	$("#plot_primary").prop("disabled", true);
+	
 	var fixed_input = {};
 	var _plot = function (t) {
 		var fixed = get_fixed_axes(axes);
@@ -285,13 +304,13 @@ function replot(cb) {
 									)
 		.done(function(data) {
 			fixed_input.schechter_himf = data.himf;
-			getTelescope(telescope, _plot);
+			getTelescopeData(telescope, _plot);
 		})
 		.fail(function() {
 			alert("Request failed.");
 		});
 	} else {
-		getTelescope(telescope, _plot);
+		getTelescopeData(telescope, _plot);
 	}
 }
 
@@ -314,9 +333,9 @@ function subplot_downloader(idx, x, y) {
 
 var plotting_subprobe = false;
 function replot_subprobe() {
-	if (!telescope || plotting_subprobe) return;
+	if (plotting_subprobe) return;
 	plotting_subprobe = true;
-	getTelescope(telescope, function (data) {
+	getTelescopeData(telescope, function (data) {
 		for (var i = 1; i <= 2; i++) {
 			var fixed_x = i === 1;
 			var xaxis_name = prev_axes[i % 2];
@@ -337,6 +356,7 @@ function replot_subprobe() {
 				y.push(prev_z[idx]);
 				both.push([x[x.length - 1], y[y.length - 1]]);
 			}
+
 			var xaxis = {title: get_pretty_axis_title(xaxis_name)};
 			if (xaxis_name !== "redshift") {
 				xaxis.type = 'log';
@@ -345,6 +365,7 @@ function replot_subprobe() {
 			if (plot_axis !== 'redshift') {
 				yaxis.type = 'log';
 			}
+			// Need to calculate cumulative galaxies detected plot
 			if (plot_axis === "n" && xaxis_name === "redshift") {
 				both.sort(function (a, b) {
 					return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0;
@@ -358,6 +379,7 @@ function replot_subprobe() {
 				}
 				yaxis.title += " (cumulative)";
 			}
+
 			var pts = [{
 						x: x,
 						y: y,
@@ -388,6 +410,9 @@ function replot_subprobe() {
 	});
 }
 
+/*
+Returns the fixed axes found by checking the known dynamic input axes against the possible axes that can be used.
+*/
 function get_fixed_axes(in_axes) {
 	var fixed = [];
 	for (var i = 0; i < possible_parameters.length; i++) {
@@ -412,6 +437,30 @@ function validate_schechter_params() {
 }
 
 $(function() {
+	function update_axes_units() {
+		var fixed = get_fixed_axes(axes);
+		$(".fixed-value-container").show();
+		for (var i = 1; i <= 2; i++) {
+			var prefix = "#fixed-" + i;
+			$(prefix + "-value").val('').attr('placeholder', get_axis_title(fixed[i - 1]));
+			
+			var $units = $(prefix + "-units");
+			var pinfo = param_info[fixed[i - 1]];
+			if (pinfo.units) {
+				$units.css('display', '');
+				if (pinfo.units_html) {
+					$units.html(pinfo.units_html);
+				} else {
+					$units.text(pinfo.units);
+				}
+			} else if (fixed[i - 1] === "redshift") {
+				$units.text("");
+			} else {
+				$units.hide();
+			}
+		}
+	}
+
 	function updateUI(changed) {
 		for (var i = 1; i <= 2; i++) {
 			var prefix = "#axis-" + i;
@@ -419,7 +468,8 @@ $(function() {
 			$(prefix + "-range-title").text(p ? p.title : i === 1 ? "X axis" : "Y axis");
 		}
 		if (!axes[0] || !axes[1] || axes[0] === axes[1]) {
-			$(".fixed-value-container").hide(); $(".fixed-axis-input").val('');
+			$(".fixed-value-container").hide(); 
+			$(".fixed-axis-input").val('');
 			$("#plot_primary").prop('disabled', true);
 			return;
 		}
@@ -427,27 +477,7 @@ $(function() {
 			$(".fixed-value-container").hide();
 			$("#fixed-1-value,#fixed-2-value").val('1');
 		} else if (changed === "axes") {
-			var fixed = get_fixed_axes(axes);
-			$(".fixed-value-container").show();
-			for (var i = 1; i <= 2; i++) {
-				var prefix = "#fixed-" + i;
-				$(prefix + "-value").val('').attr('placeholder', get_axis_title(fixed[i - 1]));
-				
-				var $units = $(prefix + "-units");
-				var pinfo = param_info[fixed[i - 1]];
-				if (pinfo.units) {
-					$units.css('display', '');
-					if (pinfo.units_html) {
-						$units.html(pinfo.units_html);
-					} else {
-						$units.text(pinfo.units);
-					}
-				} else if (fixed[i - 1] === "redshift") {
-					$units.text("");
-				} else {
-					$units.hide();
-				}
-			}
+			update_axes_units();
 		}
 		var canPlot = true; 
 		if (plot_axis === "n") {
@@ -514,18 +544,12 @@ $(function() {
 			return;
 		} 
 		var html = '';
-		if (val === "ss") {
+		if (val === "ss" || val === "n") { // can only use redshift and resolution as axes for these plots
 			default_axis_html = [];
 			for (var i = 1; i <= 2; i++) {
 				default_axis_html.push($("#axis-" + i + "-select").html());
 			}
 			html = "<option value=''></option><option value='resolution'>Resolution</option><option value='redshift'>Redshift</option>";
-		} else if (val === "n") {
-			default_axis_html = [];
-			for (var i = 1; i <= 2; i++) {
-				default_axis_html.push($("#axis-" + i + "-select").html());
-			}
-			html = "<option value=''></option><option value='redshift'>Redshift</option><option value='resolution'>Resolution</option>";
 		} else if (default_axis_html) {
 			for (var i = 1; i <= 2; i++) {
 				$("#axis-" + i + "-select").html(default_axis_html[i]);
@@ -571,12 +595,13 @@ $(function() {
 			param_info.resolution.title = "Angular Resolution";
 			param_info.resolution.units = "Arcseconds";
 		}
+		updateUI("phsyical-resolution");
 	});
 
 	$("#telescope-select").click(function(e) {
 		e.preventDefault();
 		var $target = $(e.target);
-		if (!$target.data('telescope')) return;
+		if (!$target.data('telescope')) return; 
 		telescope = $target.data('telescope');
 		$("#dropdown-text").text($target.text());
 		updateUI("telescope");
