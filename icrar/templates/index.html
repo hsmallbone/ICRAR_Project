@@ -24,6 +24,11 @@
 		</div>
 	</form>
 	-->
+	<div class="row" style="padding-bottom: 1em">
+		<div class="col-lg-12">
+			<h2>Survey planning tool</h2>
+		</div>
+	</div>
 	<div class="row">
 		<div class="col-lg-2">
 			<div class="dropdown">
@@ -113,25 +118,25 @@
 	<div class="row">
 		<p class="col-lg-1 form-control-static" id="axis-1-range-title">X axis</p>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="From" id="axis-1-from" value="0"/>
+			<input type="text" class="form-control" placeholder="From" id="axis-1-from"/>
 		</div>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="To" id="axis-1-to" value="0.26"/>
+			<input type="text" class="form-control" placeholder="To" id="axis-1-to"/>
 		</div>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints" value="100"/>
+			<input type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints"/>
 		</div> 
 	</div>
 	<div class="row">
 		<p class="col-lg-1 form-control-static" id="axis-2-range-title">Y axis</p>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="From" id="axis-2-from" value="10"/>
+			<input type="text" class="form-control" placeholder="From" id="axis-2-from"/>
 		</div>		
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="To" id="axis-2-to" value="32"/>
+			<input type="text" class="form-control" placeholder="To" id="axis-2-to"/>
 		</div>
 		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints" value="10"/>
+			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints"/>
 		</div>
 	</div>
 	<div class="row form-group">
@@ -140,13 +145,13 @@
 		</p>
 		<div class="fixed-value-container col-lg-3" style="display: none">
 				<div class="input-group">
-		  			<input type="text" class="fixed-axis-input form-control" id="fixed-1-value" value="30940"/>
+		  			<input type="text" class="fixed-axis-input form-control" id="fixed-1-value"/>
 		  			<span class="input-group-addon" id="fixed-1-units"></span>
 				</div>
 		</div>
 		<div class="fixed-value-container col-lg-3" style="display: none">
 				<div class="input-group">
-		  			<input type="text" class="fixed-axis-input form-control" id="fixed-2-value" value="9600"/>
+		  			<input type="text" class="fixed-axis-input form-control" id="fixed-2-value"/>
 		  			<span class="input-group-addon" id="fixed-2-units"></span>
 				</div>
 		</div>
@@ -166,10 +171,10 @@
 							<div class="form-group"><input type="text" class="form-control" id="opt_dishsize" placeholder="Dish size"/></div>
 							<div class="form-group"><input type="text" class="form-control" id="opt_fovne" placeholder="Noise equivalent field of view"/></div>
 							<div class="row form-group">
-								<div class="col-lg-6"><input type="text" class="form-control" id="opt_freqwidth" placeholder="Frequency width (Hz)" value="100000"/></div>
+								<div class="col-lg-6"><input type="text" class="form-control" id="opt_freqwidth" placeholder="Frequency width (Hz)"/></div>
 								<div class="col-lg-6"><input type="text" class="form-control" id="opt_velwidth" placeholder="Velocity width (km/s)"/></div> 
 							</div>
-							<div class="form-group"><input type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)" value="0.681"/></div>
+							<div class="form-group"><input type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)"/></div>
 							<h4>Cosmology</h4>
 							<div class="row form-group">
 								<div class="col-lg-6"><input type="text" class="form-control" id="opt_h0" placeholder="Hubble constant" value="70"/></div>
@@ -179,7 +184,7 @@
 							<div class="form-group"><input type="text" class="form-control" id="opt_sn_lim" placeholder="Minimum S/N to detect galaxies"/></div>
 							<div class="row"><div class="col-lg-12">Schechter function bounds (log MHI)</div></div>
 							<div class="row form-group">
-								<div class="col-lg-6"><input type="text" class="form-control" id="schechter-range-low" value="8.5"/></div>
+								<div class="col-lg-6"><input type="text" class="form-control" id="schechter-range-low" value="6"/></div>
 								<div class="col-lg-6"><input type="text" class="form-control" id="schechter-range-high" value="11"/></div>
 							</div>
 						</div>
@@ -193,17 +198,13 @@
 			<button class="btn btn-success" id="plot_primary" disabled="disabled">Plot</button>
 		</div>
 	</div>
-	<div class="row">
-		<div id="schechterplot"></div>
-	</div>
-	<div class="row">
-		<div id="schechterplot2"></div>
-	</div>
 	<div class="row" style="padding-top:20px">
 		<div id="plot"></div>
 	</div>
 	<div class="row">
 		<div id="detailPlot1"></div>
+	</div>
+	<div class="row">
 		<div id="detailPlot2"></div>
 	</div>
 </body>

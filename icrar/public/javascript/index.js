@@ -103,18 +103,6 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 	for (var i = 0; i < data.redshift.length; i++) {
 		data.redshift_indices[i] = i;
 	}
-	if (plot_axis === "n") {
-		var x = new Array(fixed_input.schechter_himf.length), y = new Array(x.length);
-		var x2 = new Array(x.length), y2 = new Array(y.length);
-		for(var i = 0; i < x.length; i++) {
-			var e  = fixed_input.schechter_himf[i];
-			x[i] = e[0] + e[1];
-			x[i] /= 2; 
-			x2[i] = x[i];
-			y2[i] = e[2];
-		}
-		Plotly.newPlot('schechterplot', [{x:x2,y:y2}]);
-	}
 
 	var input = $.extend({}, fixed_input); // copy fixed input array
 	var calculator = new Worker('/javascript/param_calculator.js'); // calculate the actual data in a web worker to avoid locking up the main thread
@@ -127,22 +115,6 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 		progress.go(100);
 		input = e.data.input;
 		var x = e.data.x, y = e.data.y, z = e.data.z;
-
-		if (plot_axis === "n") {
-			var ccc = [];
-			var xx, yy;
-			for (var j = 1; j <= 2; j++) {
-				var bb = input["b" + j];
-				xx = new Array(bb.length), yy = new Array(xx.length);  
-				for(var i = 0; i < xx.length; i++) { 
-					xx[i] = (bb[i][0]);
-					yy[i] = bb[i][1] === 0 ? 0 : Math.log10(bb[i][1]);  	
-				}  
-				ccc.push({x: xx, y: yy});
-			}
-			console.log(ccc);
-			Plotly.newPlot('schechterplot2', ccc, {xaxis: {title: "log M_HI (kpc)"}, yaxis: {title: "log N"}});
-		}
 
 		prev_input = input;
 		prev_x = x;
@@ -549,7 +521,7 @@ $(function() {
 			for (var i = 1; i <= 2; i++) {
 				default_axis_html.push($("#axis-" + i + "-select").html());
 			}
-			html = "<option value=''></option><option value='resolution'>Resolution</option><option value='redshift'>Redshift</option>";
+			html = "<option value=''></option><option value='redshift'>Redshift</option><option value='resolution'>Resolution</option>";
 		} else if (default_axis_html) {
 			for (var i = 1; i <= 2; i++) {
 				$("#axis-" + i + "-select").html(default_axis_html[i]);

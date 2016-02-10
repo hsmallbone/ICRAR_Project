@@ -284,17 +284,9 @@ function level_function(data, input, plot_axis) {
   		// velocity of channel in hz (default 50kHz)
 		var v_chan = freqwidth;
 
-		var observation_volume; // in MPC^3
-		if (input.last_redshift === null) {
-			observation_volume = 0;
-		} else {
-			observation_volume = calculate_volume(input.last_redshift, z, input.area); 
-		}
+		var observation_volume = input.last_redshift === null ? 0 : calculate_volume(input.last_redshift, z, input.area); // in MPC^3
  
  		var angular_diameter_distance_z = angular_diameter_distance(z);
- 		input.b1 = input.b1 || [];
- 		input.b2 = input.b2 || [];
- 		input.b3 = input.b3 || [];
 		for (var i = 0; i < table.length; i++) {
 			var entry = table[i];
 			// use midpoint of MHI bin
@@ -308,10 +300,6 @@ function level_function(data, input, plot_axis) {
 			var nchans_sqrt = Math.sqrt(nchans);
 
 			var D_HI = Math.pow(mhi / Math.pow(10, 6.8), 0.55) / Math.pow(10, 3); // Mpc, normalisation mass / gamma index from Duffy			
-			var bb = input.resolution != 29.8 ? null : z < 0.26 ? input.b1 : null; //: z < 0.2 ? input.b2 : z < 0.26 ? input.b3 : null;
-			if (bb && bb.length < table.length) {
-				bb.push([logmhi, 0]);  
-			}
 
 			var angular_size = (D_HI / angular_diameter_distance_z) * (180 / Math.PI) * 60 * 60; // rearrange d_A = D_HI/theta and convert to arcseconds
 			var Agal = Math.PI * Math.pow(angular_size / 2, 2) * entry[5]; // pi * (D_HI[converted to on-sky scale] / 2)^2 * (B/A) from Duffy
@@ -323,43 +311,10 @@ function level_function(data, input, plot_axis) {
 
 			var sigma_chan_jy = rms_1sigma * Math.pow(10, -3); // convert mJy to Jy
 			var sn = stot / (sigma_chan_jy * v_chan * nchans_sqrt * noise_scaling); // signal to noise ratio		
-			if (bb && input.b2.length < table.length) {
-				input.b2.push([logmhi, 0]);  
-			}
-			var sn_lim = input.sn_lim || 5; 
-			if (false && sn > sn_lim && logmhi < 10) { // debug
-				console.log(
-					"z0 " + input.last_redshift +
-					"\nz1 " + z + 
-					"\nluminosity_dist " + luminosity_dist +
-					"\nsigma_chan " + sigma_chan + 
-					"\nv_chan " + v_chan + 
-					"\nvolume " + observation_volume + 
-					"\nlogmhi " + logmhi + 
-					"\nstot " + stot + 
-					"\nrandom_cos_i " + random_cos_i +
-					"\nrandom_inclination" + random_inclination +
-					"\nb_on_a " + b_on_a +
-					"\nD_HI " + D_HI + 
-					"\nangular_diameter_distance " + angular_diameter_distance(z) +
-					"\nangular_size " + angular_size + 
-					"\nsyn_beamsize " + syn_beamsize +
-					"\nAgal " + Agal + 
-					"\nAbeam " + Abeam + 
-					"\nnoise_scaling " + noise_scaling + 
-					"\nw_theta " + w_theta + 
-					"\nw_theta_hz " + w_theta_hz + 
-					"\nnchans " + nchans + 
-					"\nsn " + sn);
-			}
+
+			var sn_lim = input.sn_lim || 5;
 			if (sn > sn_lim) {
 				n += entry[2] * observation_volume;
-				if (bb) { 
-					bb[i][1] += entry[2] * observation_volume; 
-				}
-			}
-			if (bb) { 
-				input.b2[i][1] += entry[2] * observation_volume; 
 			} 
 		}
 		return n;

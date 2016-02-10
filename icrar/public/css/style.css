@@ -31,12 +31,23 @@
 
 /* Footer styling */
 .footer {
-    margin-top: 45px;
-    padding: 35px 30px 36px;
-    border-top: 1px solid #e5e5e5;
+  height: 25px;
+  padding: 0;
+  margin: 0;
+  text-align: center;
+  background-color: #1c1c1c;
+  color: #929292;
+}
+html, body {
+  height: 100%;
 }
 
-.footer p {
-    margin-bottom: 0;
-    color: #555;
+.page-wrap {
+  min-height: 100%;
+  margin: 0 auto -30px;
+}
+
+.page-wrap:after {
+  content: "";
+  display: block;
 }
