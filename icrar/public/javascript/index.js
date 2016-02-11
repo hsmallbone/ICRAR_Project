@@ -550,7 +550,11 @@ $(function() {
 		}
 		updateUI("axes");
 	});
+/*
+A student has developed a free website to help scientists find galaxies and study gas on Western Australia's newest telescopes. Working from the International Centre for Radio Astronomy Research (ICRAR),
+the project aims to provide insights into telescope performance as they survey the sky to understand galaxy formation. "Scientists need helpful tools to predict what telescopes will be able to see in the sky, so we have created a visualisation tool for predicted galaxy detections, hydrogen gas sensitivity and noise against survey parameters," says student Harry Smallbone. The website is freely available to astronomers at skaplanner.icrar.org, and builds on collaborative research from ICRAR. Using data from a simulated telescope survey of the sky, the tool is able to create predictions of how sensitive a telescope will be to seeing radio emissions from gas and the impact of radio noise interference. From there the tool is able to create performance plots based on data from astronomers about what they want the telescope to do such as observation time and area. The website is also able to predict how many galaxies can be seen from a particular radio telescope based on previous research. "It has been really helpful to build on the experience and research from other scientists also working at ICRAR. Hopefully the website will be another collaborative tool for international research to draw upon," Mr Smallbone said. Western Australia has two major telescope projects in construction that the website will be used for, the Square Kilometre Array (SKA) and the Australian Square Kilometre Array Pathfinder (ASKAP). 
 
+*/
 	$("#axis-1-from,#axis-1-to,#axis-1-npoints,#axis-2-from,#axis-2-to,#axis-1-npoints").on('keyup change', function () {
 		updateUI("axes-units");
 	});
