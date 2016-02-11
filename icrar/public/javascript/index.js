@@ -448,7 +448,7 @@ $(function() {
 		if (plot_axis === "ss") {
 			$(".fixed-value-container").hide();
 			$("#fixed-1-value,#fixed-2-value").val('1');
-		} else if (changed === "axes") {
+		} else if (changed === "axes" || changed === "physical-resolution") {
 			update_axes_units();
 		}
 		var canPlot = true; 
@@ -469,7 +469,7 @@ $(function() {
 		$("#plot_primary").prop('disabled', false);
 	};
 
-	$("#schechter-select").change(function () {
+	$("#schechter-select").on('keyup change', function () {
 		if (!this.value) return;
 		var params = schechter_params[this.value];
 		if (!params) return;
@@ -480,7 +480,7 @@ $(function() {
 		updateUI("schechter-parameter");
 	});
 
-	$(".fixed-axis-input").change(function () {
+	$(".fixed-axis-input").on('keyup change', function () {
 		updateUI("fixed_axis");
 	});
 
@@ -551,11 +551,11 @@ $(function() {
 		updateUI("axes");
 	});
 
-	$("#axis-1-from,#axis-1-to,#axis-1-npoints,#axis-2-from,#axis-2-to,#axis-1-npoints").change(function () {
+	$("#axis-1-from,#axis-1-to,#axis-1-npoints,#axis-2-from,#axis-2-to,#axis-1-npoints").on('keyup change', function () {
 		updateUI("axes-units");
 	});
 
-	$(".schechter-parameter").change(function() {
+	$(".schechter-parameter").on('keyup change', function() {
 		updateUI("schechter-parameter");
 	});
 
@@ -567,7 +567,7 @@ $(function() {
 			param_info.resolution.title = "Angular Resolution";
 			param_info.resolution.units = "Arcseconds";
 		}
-		updateUI("phsyical-resolution");
+		updateUI("physical-resolution");
 	});
 
 	$("#telescope-select").click(function(e) {

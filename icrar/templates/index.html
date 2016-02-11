@@ -167,12 +167,13 @@
 			    	</div>
 				    <div id="aopb" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
 						<div class="panel-body">
-							<h4>Telescope parameters</h4>
+							<h4>Telescope parameters</h4> 
 							<div class="form-group"><input type="text" class="form-control" id="opt_dishsize" placeholder="Dish size"/></div>
 							<div class="form-group"><input type="text" class="form-control" id="opt_fovne" placeholder="Noise equivalent field of view"/></div>
+							<div class="row"><div class="col-lg-6">Frequency width (Hz)</div><div class="col-lg-6">Velocity width (km/s)</div></div>
 							<div class="row form-group">
-								<div class="col-lg-6"><input type="text" class="form-control" id="opt_freqwidth" placeholder="Frequency width (Hz)"/></div>
-								<div class="col-lg-6"><input type="text" class="form-control" id="opt_velwidth" placeholder="Velocity width (km/s)"/></div> 
+								<div class="col-lg-6"><input type="text" class="form-control" id="opt_freqwidth" value="50000"/></div>
+								<div class="col-lg-6"><input type="text" class="form-control" id="opt_velwidth"/></div> 
 							</div>
 							<div class="form-group"><input type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)"/></div>
 							<h4>Cosmology</h4>
