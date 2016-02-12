@@ -1,8 +1,8 @@
-virtualenv /var/tg2env
-/var/tg2env/bin/pip install tg.devtools
-/var/tg2env/bin/pip install tg.pluggable
-/var/tg2env/bin/pip install scipy
-/var/tg2env/bin/pip install numpy
-source /var/tg2env/bin/activate
+virtualenv tg2env
+source tg2env/bin/activate
+pip install tg.devtools
+pip install tgext.pluggable
+pip install scipy
+pip install numpy
 python setup.py develop
 
