@@ -66,7 +66,7 @@
 		</div>
 	</div>
 	<div class="row form-group">
-		<p class="col-lg-1 form-control-static">Axes</p>
+		<p class="col-lg-1 form-control-static">X axis</p>
 		<div class="col-lg-2">
 			<select class="axis-select form-control" id="axis-1-select" disabled="disabled">
 				<option value=""></option>
@@ -77,6 +77,7 @@
 				<option value="nhi">NHI</option>
 			</select>
 		</div>
+		<p class="col-lg-2 form-control-static">Y axis</p>
 		<div class="col-lg-2">
 			<select class="axis-select form-control" id="axis-2-select" disabled="disabled">
 				<option value=""></option>
@@ -197,6 +198,22 @@
 	<div class="row">
 		<div class="col-lg-1">
 			<button class="btn btn-success" id="plot_primary" disabled="disabled">Plot</button>
+		</div>
+		<div class="col-lg-3">
+			<div class="input-group">
+			  <input type="text" class="form-control"/>
+			  <div class="input-group-btn">
+				<button class="btn btn-default" id="plot_fixed_x" disabled="disabled">Plot at fixed X</button>
+			  </div>
+			</div>
+		</div>
+		<div class="col-lg-3">
+			<div class="input-group">
+			  <input type="text" class="form-control"/>
+			  <div class="input-group-btn">
+				<button class="btn btn-default" id="plot_fixed_y" disabled="disabled">Plot at fixed Y</button>
+			  </div>
+			</div>
 		</div>
 	</div>
 	<div class="row" style="padding-top:20px">

@@ -303,6 +303,104 @@ function subplot_downloader(idx, x, y) {
 	}
 }
 
+
+function plot_subprobe(plot_target, data, plot_axis, fixed_axis, x, y, both) {
+	var xaxis = {title: get_pretty_axis_title(fixed_axis.name)};
+	if (fixed_axis.name !== "redshift") {
+		xaxis.type = 'log';
+	}
+	var yaxis = {title: get_pretty_axis_title(plot_axis)};
+	if (plot_axis !== 'redshift') {
+		yaxis.type = 'log';
+	}
+	// Need to calculate cumulative galaxies detected plot
+	if (plot_axis === "n" && fixed_axis.name === "redshift") {
+		both.sort(function (a, b) {
+			return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0;
+		});
+		for (var j = 0; j < both.length; j++) {
+			x[j] = both[j][0];
+			y[j] = both[j][1];
+			if (j > 0) {
+				y[j] += y[j - 1];
+			}
+		}
+		yaxis.title += " (cumulative)";
+	}
+
+	var pts = [{
+				x: x,
+				y: y,
+				mode: 'lines'
+			  }];
+	var fixed_axis_title = get_axis_title(fixed_axis.fixed_name);
+	var fixed_axis_value = fixed_axis.value;
+	Plotly.newPlot(plot_target, pts, 
+		{
+			title: get_axis_title(fixed_axis.name) + " with fixed " + fixed_axis_title + " at " + fixed_axis_value, 
+			xaxis: xaxis, 
+			yaxis: yaxis
+		}, 
+		{
+			displaylogo: false, 
+			showLink: false, 
+			modeBarButtonsToRemove: ["sendDataToCloud"], 
+			modeBarButtonsToAdd: [{
+			    name: 'exportData',
+			    title: 'Export data to text',
+			    icon: Plotly.Icons.disk,
+			    click: subplot_downloader(i, x, y)
+			}], 
+			displayModeBar: true
+		});
+	plotting_subprobe = false;
+}
+
+function replot_specific_subprobe(fixed_axis, fixed_value) {
+	if (plotting_subprobe) return;
+	plotting_subprobe = true;	
+	getTelescopeData(telescope, function (data) {
+		var fixed_x = fixed_axis === "x";
+		var xaxis_name = axes[fixed_x ? 0 : 1];
+
+		// For interpolation purposes, create a mapping of index->index to save repopulation later
+		data.telescope.params_indices = new Array(data.telescope.params.length);
+		for (var i = 0; i < data.telescope.params.length; i++) {
+			data.telescope.params_indices[i] = i;
+		}
+		data.redshift_indices = new Array(data.redshift.length);
+		for (var i = 0; i < data.redshift.length; i++) {
+			data.redshift_indices[i] = i;
+		}
+
+		var input = $.extend({}, fixed_input); // copy fixed input array
+		var calculator = new Worker('/javascript/param_calculator.js'); // calculate the actual data in a web worker to avoid locking up the main thread
+		var progress = new Nanobar({bg: "#00CB0E"}); // use the nanobar library for progress indication
+		calculator.onmessage = function(e) {
+			if (e.data.progress) { 
+				progress.go(e.data.progress);
+				return;
+			}
+			progress.go(100);
+			input = e.data.input;
+			var x = e.data.x, y = e.data.z;
+			var both = [];
+			for (var i = 0; i < x.length; i++) {
+				both.push([x[i], y[i]]);
+			}
+			plot_subprobe('detailPlot1', data, plot_axis, 
+				{
+					name: xaxis_name, 
+				 	value: fixed_x ? fixed_subaxis_pt.x : fixed_subaxis_pt.y, 
+				 	fixed_name: fixed_x ? axes[0] : axes[1]
+				}, 
+				x, y, both
+			);
+		};
+		calculator.postMessage({input: input, axis_sizes: axis_sizes, axes: axes, data: data, plot_axis: plot_axis});
+	});
+}
+
 var plotting_subprobe = false;
 function replot_subprobe() {
 	if (plotting_subprobe) return;
@@ -328,56 +426,14 @@ function replot_subprobe() {
 				y.push(prev_z[idx]);
 				both.push([x[x.length - 1], y[y.length - 1]]);
 			}
-
-			var xaxis = {title: get_pretty_axis_title(xaxis_name)};
-			if (xaxis_name !== "redshift") {
-				xaxis.type = 'log';
-			}
-			var yaxis = {title: get_pretty_axis_title(plot_axis)};
-			if (plot_axis !== 'redshift') {
-				yaxis.type = 'log';
-			}
-			// Need to calculate cumulative galaxies detected plot
-			if (plot_axis === "n" && xaxis_name === "redshift") {
-				both.sort(function (a, b) {
-					return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0;
-				});
-				for (var j = 0; j < both.length; j++) {
-					x[j] = both[j][0];
-					y[j] = both[j][1];
-					if (j > 0) {
-						y[j] += y[j - 1];
-					}
-				}
-				yaxis.title += " (cumulative)";
-			}
-
-			var pts = [{
-						x: x,
-						y: y,
-						mode: 'lines'
-					  }];
-			var fixed_axis_title = fixed_x ? get_axis_title(prev_axes[0]) : get_axis_title(prev_axes[1]);
-			var fixed_axis_value = fixed_x ? fixed_subaxis_pt.x : fixed_subaxis_pt.y;
-			Plotly.newPlot('detailPlot' + i, pts, 
+			plot_subprobe('detailPlot' + i, data, plot_axis, 
 				{
-					title: get_axis_title(xaxis_name) + " with fixed " + fixed_axis_title + " at " + fixed_axis_value, 
-					xaxis: xaxis, 
-					yaxis: yaxis
+					name: xaxis_name, 
+				 	value: fixed_x ? fixed_subaxis_pt.x : fixed_subaxis_pt.y, 
+				 	fixed_name: fixed_x ? prev_axes[0] : prev_axes[1]
 				}, 
-				{
-					displaylogo: false, 
-					showLink: false, 
-					modeBarButtonsToRemove: ["sendDataToCloud"], 
-					modeBarButtonsToAdd: [{
-					    name: 'exportData',
-					    title: 'Export data to text',
-					    icon: Plotly.Icons.disk,
-					    click: subplot_downloader(i, x, y)
-					}], 
-					displayModeBar: true
-				});
-			plotting_subprobe = false;
+				x, y, both
+			);
 		}
 	});
 }
@@ -467,6 +523,8 @@ $(function() {
 		}
 
 		$("#plot_primary").prop('disabled', false);
+		$("#plot_fixed_x").prop('disabled', !isNaN(parseFloat($("#plot_fixed_x").val()));
+		$("#plot_fixed_y").prop('disabled', !isNaN(parseFloat($("#plot_fixed_y").val()));
 	};
 
 	$("#schechter-select").on('keyup change', function () {
@@ -550,11 +608,7 @@ $(function() {
 		}
 		updateUI("axes");
 	});
-/*
-A student has developed a free website to help scientists find galaxies and study gas on Western Australia's newest telescopes. Working from the International Centre for Radio Astronomy Research (ICRAR),
-the project aims to provide insights into telescope performance as they survey the sky to understand galaxy formation. "Scientists need helpful tools to predict what telescopes will be able to see in the sky, so we have created a visualisation tool for predicted galaxy detections, hydrogen gas sensitivity and noise against survey parameters," says student Harry Smallbone. The website is freely available to astronomers at skaplanner.icrar.org, and builds on collaborative research from ICRAR. Using data from a simulated telescope survey of the sky, the tool is able to create predictions of how sensitive a telescope will be to seeing radio emissions from gas and the impact of radio noise interference. From there the tool is able to create performance plots based on data from astronomers about what they want the telescope to do such as observation time and area. The website is also able to predict how many galaxies can be seen from a particular radio telescope based on previous research. "It has been really helpful to build on the experience and research from other scientists also working at ICRAR. Hopefully the website will be another collaborative tool for international research to draw upon," Mr Smallbone said. Western Australia has two major telescope projects in construction that the website will be used for, the Square Kilometre Array (SKA) and the Australian Square Kilometre Array Pathfinder (ASKAP). 
-
-*/
+	
 	$("#axis-1-from,#axis-1-to,#axis-1-npoints,#axis-2-from,#axis-2-to,#axis-1-npoints").on('keyup change', function () {
 		updateUI("axes-units");
 	});
@@ -587,7 +641,11 @@ the project aims to provide insights into telescope performance as they survey t
 		replot();
 	});
 
-	$("#plot_secondary").click(function(e) {
-		replot_subprobe();
+	$("#plot_fixed_x").click(function(e) {
+		replot();
+	});
+
+	$("#plot_fixed_y").click(function(e) {
+		replot();
 	});
 });
