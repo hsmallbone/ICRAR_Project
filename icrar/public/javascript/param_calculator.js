@@ -5,6 +5,15 @@ onmessage = function (e) {
 	var data = e.data.data;
 	var axes = e.data.axes;
 	var plot_axis = e.data.plot_axis;
+	// For interpolation purposes, create a mapping of index->index to save repopulation later
+	data.telescope.params_indices = new Array(data.telescope.params.length);
+	for (var i = 0; i < data.telescope.params.length; i++) {
+		data.telescope.params_indices[i] = i;
+	}
+	data.redshift_indices = new Array(data.redshift.length);
+	for (var i = 0; i < data.redshift.length; i++) {
+		data.redshift_indices[i] = i;
+	}
 	var size = axis_sizes[0].npoints * axis_sizes[1].npoints, x = new Array(size), y = new Array(size), z = new Array(size);
 	var iterations = 0;
 	for (var i = 0; i < axis_sizes[0].npoints; i++) {
@@ -25,6 +34,7 @@ onmessage = function (e) {
 	}
 	var res = {x: x, y: y, z: z, input: input};
 	postMessage(res);
+	
 }
 
 // cosmology default values

@@ -21,34 +21,41 @@ var schechter_params = { // Schechter parameter values from previous survey pape
 // Parameter axis titles etc.
 var param_info = {
 	redshift: {
-		title: "Redshift"
+		title: "Redshift",
+		title_sentence: "redshift"
 	},
 	time: {
 		title: "Time",
-		units: "Hours"
+		units: "Hours",
+		title_sentence: "time"
 	}, 
 	area: {
 		title: "Area",
 		units: "Degrees^2",
-		units_html: "degrees<sup>2</sup>"
+		units_html: "degrees<sup>2</sup>",
+		title_sentence: "area"
 	},
 	resolution: {
 		title: "Angular Resolution",
-		units: "Arcseconds"
+		units: "Arcseconds",
+		title_lower: "resolution"
 	},
 	nhi: {
 		title: "NHI",
 		units: "log_10 cm^-2",
-		units_html: "log<sub>10</sub> cm<sup>-2</sup>"
+		units_html: "log<sub>10</sub> cm<sup>-2</sup>",
+		title_sentence: "NHI"
 	},
 	ss: {
 		title: "Survey Speed",
 		units: "deg^2 mJy^-2 s^-1",
-		units_html: "deg<sup>2</sup> mJy<sup>-2</sup> s<sup>-1</sup>"
+		units_html: "deg<sup>2</sup> mJy<sup>-2</sup> s<sup>-1</sup>",
+		title_sentence: "survey speed"
 	},
 	rms: {
 		title: "RMS Noise",
-		units: "mJy"
+		units: "mJy",
+		title_sentence: "RMS"
 	},
 	n: {
 		title: "Number of galaxies"
@@ -94,18 +101,9 @@ function get_pretty_axis_title(axis) {
 The main plotting function, taking telescope data, fixed input, the axis to plot against and axis sizes, and a callback
 */
 function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
-	// For interpolation purposes, create a mapping of index->index to save repopulation later
-	data.telescope.params_indices = new Array(data.telescope.params.length);
-	for (var i = 0; i < data.telescope.params.length; i++) {
-		data.telescope.params_indices[i] = i;
-	}
-	data.redshift_indices = new Array(data.redshift.length);
-	for (var i = 0; i < data.redshift.length; i++) {
-		data.redshift_indices[i] = i;
-	}
-
 	var input = $.extend({}, fixed_input); // copy fixed input array
 	var calculator = new Worker('/javascript/param_calculator.js'); // calculate the actual data in a web worker to avoid locking up the main thread
+	calculator.postMessage = calculator.webkitPostMessage || calculator.postMessage;
 	var progress = new Nanobar({bg: "#00CB0E"}); // use the nanobar library for progress indication
 	calculator.onmessage = function(e) {
 		if (e.data.progress) { 
@@ -114,6 +112,7 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 		}
 		progress.go(100);
 		input = e.data.input;
+		window.xxx = e.data.x;
 		var x = e.data.x, y = e.data.y, z = e.data.z;
 
 		prev_input = input;
@@ -286,25 +285,25 @@ function replot(cb) {
 	}
 }
 
-function subplot_downloader(idx, x, y) {
+function subplot_downloader(info, x, y) {
 	return function (gd) {
 		var data = "Fixed: ";
-		var fixed_axes = get_fixed_axes(prev_axes);
+		var fixed_axes = info.fixed_axes;
 		for (var i = 0; i < 2; i++) {
-			data += fixed_axes[i] + "\t" + prev_input[fixed_axes[i]] + ",";
+			data += info.fixed_axes[i] + "\t" + info.input[info.fixed_axes[i]] + ",";
 		}
-		data += idx === 1 ? prev_axes[0] + "\t" + fixed_subaxis_pt.x : prev_axes[1] + "\t" + fixed_subaxis_pt.y; 
+		data += info.fixed_axis.fixed_name + "\t" + info.fixed_axis.value; 
 		data += "\n";
-		data += idx === 1 ? prev_axes[1] : prev_axes[0] + "\t" + plot_axis + "\n";
-		for (var i = 0; i < x.length; i++) {
-			data += x[i] + "\t" + y[i] + "\n";
+		data += info.fixed_axis.name + "\t" + info.plot_axis + "\n";
+		for (var i = 0; i < info.x.length; i++) {
+			data += info.x[i] + "\t" + info.y[i] + "\n";
 		}
 		download_data("icrar_data", data);
 	}
 }
 
 
-function plot_subprobe(plot_target, data, plot_axis, fixed_axis, x, y, both) {
+function plot_subprobe(plot_target, fixed_axes, input, data, plot_axis, fixed_axis, x, y) {
 	var xaxis = {title: get_pretty_axis_title(fixed_axis.name)};
 	if (fixed_axis.name !== "redshift") {
 		xaxis.type = 'log';
@@ -315,6 +314,10 @@ function plot_subprobe(plot_target, data, plot_axis, fixed_axis, x, y, both) {
 	}
 	// Need to calculate cumulative galaxies detected plot
 	if (plot_axis === "n" && fixed_axis.name === "redshift") {
+		var both = new Array(x.length);
+		for (var i = 0; i < x.length; i++) {
+			both.push([x[i], y[i]]);
+		}
 		both.sort(function (a, b) {
 			return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0;
 		});
@@ -335,6 +338,7 @@ function plot_subprobe(plot_target, data, plot_axis, fixed_axis, x, y, both) {
 			  }];
 	var fixed_axis_title = get_axis_title(fixed_axis.fixed_name);
 	var fixed_axis_value = fixed_axis.value;
+
 	Plotly.newPlot(plot_target, pts, 
 		{
 			title: get_axis_title(fixed_axis.name) + " with fixed " + fixed_axis_title + " at " + fixed_axis_value, 
@@ -349,7 +353,14 @@ function plot_subprobe(plot_target, data, plot_axis, fixed_axis, x, y, both) {
 			    name: 'exportData',
 			    title: 'Export data to text',
 			    icon: Plotly.Icons.disk,
-			    click: subplot_downloader(i, x, y)
+			    click: subplot_downloader({
+			    	fixed_axis: fixed_axis,
+			    	plot_axis: plot_axis,
+			    	x: x,
+			    	y: y,
+			    	input: input,
+			    	fixed_axes: fixed_axes
+			    }, x, y)
 			}], 
 			displayModeBar: true
 		});
@@ -361,21 +372,28 @@ function replot_specific_subprobe(fixed_axis, fixed_value) {
 	plotting_subprobe = true;	
 	getTelescopeData(telescope, function (data) {
 		var fixed_x = fixed_axis === "x";
-		var xaxis_name = axes[fixed_x ? 0 : 1];
+		var xaxis_name = fixed_x ? axes[1] : axes[0];
+		var fixed_axis_name = fixed_x ? axes[0] : axes[1];
 
-		// For interpolation purposes, create a mapping of index->index to save repopulation later
-		data.telescope.params_indices = new Array(data.telescope.params.length);
-		for (var i = 0; i < data.telescope.params.length; i++) {
-			data.telescope.params_indices[i] = i;
+		var axis_size = [get_axis_size_dict(1, axes[0]), get_axis_size_dict(2, axes[1])];
+		if (fixed_x) {
+			var tmp = axis_size[0];
+			axis_size[0] = axis_size[1];
+			axis_size[1] = tmp;
 		}
-		data.redshift_indices = new Array(data.redshift.length);
-		for (var i = 0; i < data.redshift.length; i++) {
-			data.redshift_indices[i] = i;
+		axis_size[1].npoints = 1;
+		axis_size[1].to = axis_size[1].from = fixed_value;
+		var input = {};
+		var fixed_values = [parseFloat($("#fixed-1-value").val()), parseFloat($("#fixed-2-value").val())];	
+		var fixed = get_fixed_axes(axes);
+		input[fixed_axis_name] = fixed_value;
+		for (var i = 0; i < 2; i++) {
+			input[fixed[i]] = fixed_values[i];
 		}
 
-		var input = $.extend({}, fixed_input); // copy fixed input array
 		var calculator = new Worker('/javascript/param_calculator.js'); // calculate the actual data in a web worker to avoid locking up the main thread
 		var progress = new Nanobar({bg: "#00CB0E"}); // use the nanobar library for progress indication
+		calculator.postMessage = calculator.webkitPostMessage || calculator.postMessage;
 		calculator.onmessage = function(e) {
 			if (e.data.progress) { 
 				progress.go(e.data.progress);
@@ -384,20 +402,17 @@ function replot_specific_subprobe(fixed_axis, fixed_value) {
 			progress.go(100);
 			input = e.data.input;
 			var x = e.data.x, y = e.data.z;
-			var both = [];
-			for (var i = 0; i < x.length; i++) {
-				both.push([x[i], y[i]]);
-			}
-			plot_subprobe('detailPlot1', data, plot_axis, 
+			$("#plot,#detailPlot2").html("");
+			plot_subprobe('detailPlot1', fixed, input, data, plot_axis, 
 				{
 					name: xaxis_name, 
-				 	value: fixed_x ? fixed_subaxis_pt.x : fixed_subaxis_pt.y, 
-				 	fixed_name: fixed_x ? axes[0] : axes[1]
+				 	value: fixed_value, 
+				 	fixed_name: fixed_axis_name
 				}, 
-				x, y, both
+				x, y
 			);
 		};
-		calculator.postMessage({input: input, axis_sizes: axis_sizes, axes: axes, data: data, plot_axis: plot_axis});
+		calculator.postMessage({input: input, axis_sizes: axis_size, axes: [xaxis_name, fixed_axis_name], data: data, plot_axis: plot_axis});
 	});
 }
 
@@ -413,7 +428,7 @@ function replot_subprobe() {
 			var x_idx = fixed_subaxis_pt.pointNumber[1], y_idx = fixed_subaxis_pt.pointNumber[0];
 			var size = fixed_x ? prev_axes_sizes[1].npoints : prev_axes_sizes[0].npoints; 
 
-			var x = [], y = [], both = [];
+			var x = [], y = [];
 			for (var j = 0; j < size; j++) {
 				var idx;
 				if (fixed_x) {
@@ -424,15 +439,14 @@ function replot_subprobe() {
 					x.push(prev_x[idx]);
 				}
 				y.push(prev_z[idx]);
-				both.push([x[x.length - 1], y[y.length - 1]]);
 			}
-			plot_subprobe('detailPlot' + i, data, plot_axis, 
+			plot_subprobe('detailPlot' + i, get_fixed_axes(prev_axes), prev_input, data, plot_axis, 
 				{
-					name: xaxis_name, 
+					name: xaxis_name,
 				 	value: fixed_x ? fixed_subaxis_pt.x : fixed_subaxis_pt.y, 
 				 	fixed_name: fixed_x ? prev_axes[0] : prev_axes[1]
 				}, 
-				x, y, both
+				x, y
 			);
 		}
 	});
@@ -495,6 +509,8 @@ $(function() {
 			var p = param_info[axes[i-1]];
 			$(prefix + "-range-title").text(p ? p.title : i === 1 ? "X axis" : "Y axis");
 		}
+		$("#plot_fixed_x").text("Plot at fixed " + (axes[0] ? param_info[axes[0]].title_sentence : "X"));
+		$("#plot_fixed_y").text("Plot at fixed " + (axes[1] ? param_info[axes[1]].title_sentence : "Y"));
 		if (!axes[0] || !axes[1] || axes[0] === axes[1]) {
 			$(".fixed-value-container").hide(); 
 			$(".fixed-axis-input").val('');
@@ -523,8 +539,8 @@ $(function() {
 		}
 
 		$("#plot_primary").prop('disabled', false);
-		$("#plot_fixed_x").prop('disabled', !isNaN(parseFloat($("#plot_fixed_x").val()));
-		$("#plot_fixed_y").prop('disabled', !isNaN(parseFloat($("#plot_fixed_y").val()));
+		$("#plot_fixed_x").prop('disabled', !isNaN(parseFloat($("#fixed_x_probe").val())));
+		$("#plot_fixed_y").prop('disabled', !isNaN(parseFloat($("#fixed_y_probe").val())));
 	};
 
 	$("#schechter-select").on('keyup change', function () {
@@ -642,10 +658,10 @@ $(function() {
 	});
 
 	$("#plot_fixed_x").click(function(e) {
-		replot();
+		replot_specific_subprobe("x", parseFloat($("#fixed_x_probe").val()));
 	});
 
 	$("#plot_fixed_y").click(function(e) {
-		replot();
+		replot_specific_subprobe("y", parseFloat($("#fixed_y_probe").val()));
 	});
 });
