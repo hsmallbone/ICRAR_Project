@@ -112,7 +112,6 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 		}
 		progress.go(100);
 		input = e.data.input;
-		window.xxx = e.data.x;
 		var x = e.data.x, y = e.data.y, z = e.data.z;
 
 		prev_input = input;

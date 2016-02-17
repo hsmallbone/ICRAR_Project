@@ -224,9 +224,8 @@ function level_function(data, input, plot_axis) {
 		var beamsize_z0 = beam.slice();
 		var rms_z0 = rms.slice();
 		var nhi_z0 = nhi.slice();
-
+		var z_max = 0;
 		for (var z = 0; z < 20; z += 0.01) {
-		    var z_max = z;
 		    var Tsys = input.static_tsys || get_tsys(data, z);
 		    for (var i = 0; i < beamsize_z0.length; i++) {
 		    	beam[i] = (1 + z) * beamsize_z0[i];
@@ -254,16 +253,12 @@ function level_function(data, input, plot_axis) {
 		    var nhi_1000hr_50kHz = nhi_1000hr_reqwidth - Math.log10(Math.sqrt(freqwidth / 50000));
 		    var nhi_1000hr_50kHz_possible = everpolate.linear(log_syn_beamsize, log_beamsize, log_nhi)[0];
 		    if (nhi_1000hr_50kHz > nhi_1000hr_50kHz_possible) {
-		      redshift_found = 1;
+		      z_max = z;
 		    } else {
 		      break;
 		    }
 		}
-		if (redshift_found === 1) {
-			return z_max;
-		} else {
-			return 0;
-		}
+		return z_max;
 	} else if (plot_axis === "ss") {
 		var ss_1000hr_50kHz = everpolate.linear(Math.log10(syn_beamsize), log_beamsize, ss)[0];
 		var ss_1000hr_reqwidth = ss_1000hr_50kHz * Math.sqrt(50000/freqwidth);
