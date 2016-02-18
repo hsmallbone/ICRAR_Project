@@ -15,7 +15,7 @@
 
   <div class="container page-wrap">
     <div class="row">
-      <div class="col-lg-5">
+      <div class="col-lg-10">
         <a href="http://icrar.org">
           <img src="${tg.url('/img/icrar.png')}" style="width: 100%" alt="ICRAR Logo"/> 
         </a>
@@ -24,7 +24,7 @@
     <!-- Flash messages -->
     <py:with vars="flash=tg.flash_obj.render('flash', use_js=False)">
       <div class="row">
-        <div class="col-md-8 col-md-offset-2">
+        <div class="col-md-16 col-md-offset-4">
           <div py:if="flash" py:replace="Markup(flash)" />
         </div>
       </div>

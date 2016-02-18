@@ -93,6 +93,12 @@ class RootController(BaseController):
         (h0, h0new, low, high, step) = (float(h0), float(h0new), float(low), float(high), float(step))
         if step < 0.001: 
             return dict(error='step too low')
+        if low < 3:
+            return dict(error='lower bound too low')
+        if high > 15:
+            return dict(error='upper bound too high')
+        if h0 < 0 or h0new < 0:
+            return dict(error='invalid hubble constant')
         params = (float(phistar) * ((h0new / h0) ** 3), float(mhistar) * ((h0new / h0) ** -2), float(alpha))
         while low <= high: 
             upper = low + step # for each mass bin

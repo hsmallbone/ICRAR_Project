@@ -43,7 +43,7 @@ The Square Kilometre Array (SKA) represents the cutting edge of radio telescope 
 In brief, the website is able to use scaling relations on tables of performance parameters for a number of telescopes to display plots of different survey parameters. 
 
 \section{Background}
-HI surveys are a major science goal for the SKA, and there are already preliminary survey designs using predicted performance values \parencite{lister2015}. A major limitation of previous HI surveys such as ALFALFA \parencite{alfalfa} or HIPASS \parencite{hipass2003} has been the low column density of HI gas. HI gas at a density of below $10^{19} cm^{-2}$ is theorised to make up much of the Intergalactic Medium (IGM) and drive galaxy formation \parencite{popping2014}. In order to detect the IGM, telescopes with column density sensitivity on the order of about $ 10^{18} cm^{-2} $ are required, along with enough spatial resolution to resolve structure and kinematics of the HI gas itself.
+HI surveys are a major science goal for the SKA, and there are already preliminary survey designs using predicted performance values \parencite{lister2015}. A major limitation of previous HI surveys such as ALFALFA \parencite{alfalfa} or HIPASS \parencite{hipass2003, hipass2005} has been the low column density of HI gas. HI gas at a density of below $10^{19} cm^{-2}$ is theorised to make up much of the Intergalactic Medium (IGM) and drive galaxy formation \parencite{popping2014}. In order to detect the IGM, telescopes with column density sensitivity on the order of about $ 10^{18} cm^{-2} $ are required, along with enough spatial resolution to resolve structure and kinematics of the HI gas itself.
 
 In order to reach this desired sensitivity, there are a number of parameters which can be tuned depending on the observation volume. An example table of parameters can be seen in Figure \ref{fig:surveytable1}. Specific science goals such as a small observation area of a single galaxy, or an all-sky survey of as many galaxies as possible, have a large impact on how the different parameters should be explored. Often it is necessary to set explicit fixed limits on some parameters and examine how the target parameters such as column density sensitivity change as other parameters vary.
 \begin{figure}[H]
@@ -161,8 +161,7 @@ The changes to the interface such as determining which values need to be fixed a
 The \texttt{replot} function then creates a Web Worker, which is an asynchronous calculator used to avoid freezing the main webpage while calculations are being performed. The code for the Web Worker begins inside \verb|public/javascript/param_calculator.js|. First, arrays of x, y and z data are created inside the \texttt{onmessage} function. These are spaced on a simple grid given by the user. The arrays are then filled by calling the function \verb|level_function| which solves for the plot parameter. \verb|level_function| performs the majority of the algorithms listed in Appendix \ref{sec:algorithms}. \verb|param_calculator.js| then passes the filled arrays back to \verb|index.js|. 
 
 At this point, the \texttt{plot} function will send the data to Plotly.js, a Javascript plotting library which will actually display the data and handle hover and click events. \texttt{plot} also overrides the default Plotly.js buttons to add a download data button which will download a tab-separated file of the plotting arrays. An overall flow chart of this process is shown in Figure \ref{fig:flowcode}.
-\section{Conclusion}
-The website is online at skaplanner.icrar.org and should be relatively easy to extend.
+
 \appendix
 \section{Algorithm listing}
 \label{sec:algorithms}

@@ -25,209 +25,221 @@
 	</form>
 	-->
 	<div class="row" style="padding-bottom: 1em">
-		<div class="col-lg-12">
-			<h2>Survey planning tool</h2>
+		<div class="col-lg-24">
+			<h2>HI survey planning tool</h2>
 		</div>
 	</div>
 	<div class="row">
-		<div class="col-lg-2">
-			<div class="dropdown">
-			  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-			    <span id="dropdown-text">Telescope</span>
-			    <span class="caret"></span>
-			  </button>
-			  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1" id="telescope-select">
-			  	<li py:for="telescope in telescopes">
-			  		<a href="#" data-telescope="${telescope}">${telescopes[telescope]['name']}</a>
-			  	</li>
-			  </ul>
+		<div class="col-lg-16">
+			<div class="row">
+				<div class="col-lg-4">
+					<div class="dropdown" data-help="telescope">
+					  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+					    <span id="dropdown-text">Telescope</span>
+					    <span class="caret"></span>
+					  </button>
+					  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1" id="telescope-select">
+					  	<li py:for="telescope in telescopes">
+					  		<a href="#" data-telescope="${telescope}">${telescopes[telescope]['name']}</a>
+					  	</li>
+					  </ul>
+					</div>
+				</div>
+				<p class="col-lg-6 form-control-static">Plot:</p>
+				<div class="col-lg-6" data-help="plot">
+					<select class="form-control probe-select" id="plot-select">
+						<option value=""></option>
+						<option value="nhi">NHI</option>
+						<option value="rms">RMS Noise</option>
+						<option value="ss">Survey Speed</option>
+						<option value="n">N</option>
+						<option value="resolution">Resolution</option>
+						<option value="redshift">Redshift</option>
+						<option value="time">Time</option>
+						<option value="area">Area</option>
+					</select>
+				</div>
+				<div class="col-lg-6" data-help="physical_resolution">
+					<div class="checkbox">
+					    <label>
+					      <input id="opt_use_physical_resolution" type="checkbox"/> Use physical resolution
+					    </label>
+					  </div>
+				</div>
+			</div>
+			<div class="row form-group">
+				<p class="col-lg-4 form-control-static">X axis</p>
+				<div class="col-lg-6" data-help="axes">
+					<select class="axis-select form-control" id="axis-1-select" disabled="disabled">
+						<option value=""></option>
+						<option value="time">Time</option>
+						<option value="area">Area</option>
+						<option value="resolution">Resolution</option>
+						<option value="redshift">Redshift</option>
+						<option value="nhi">NHI</option>
+					</select>
+				</div>
+				<p class="col-lg-6 form-control-static">Y axis</p>
+				<div class="col-lg-6" data-help="axes">
+					<select class="axis-select form-control" id="axis-2-select" disabled="disabled">
+						<option value=""></option>
+						<option value="area">Area</option>
+						<option value="time">Time</option>
+						<option value="resolution">Resolution</option>
+						<option value="redshift">Redshift</option>
+						<option value="nhi">NHI</option>
+					</select>
+				</div>
+			</div>
+			<div class="row form-group schechter-parameters" style="display: none" >
+				<p class="col-lg-4 form-control-static">Schechter HIMF</p>
+				<div class="col-lg-6">
+					<input data-help="schechter" type="text" class="schechter-parameter form-control" id="schechter-phistar" placeholder="Phi star"/>
+				</div>
+				<div class="col-lg-6">
+					<input data-help="schechter" type="text" class="schechter-parameter form-control" id="schechter-mhistar" placeholder="MHI star"/>
+				</div>
+				<div class="col-lg-6">
+					<input data-help="schechter" type="text" class="schechter-parameter form-control" id="schechter-alpha" placeholder="Alpha"/>
+				</div>
+			</div>
+			<div class="row schechter-parameters" style="display: none">
+				<div class="col-lg-offset-4 col-lg-6">
+					<input data-help="schechter" type="text" class="schechter-parameter form-control" id="schechter-h0" placeholder="Hubble constant"/>
+				</div>
+				<div class="col-lg-6">
+					<select data-help="schechter_func" class="form-control" id="schechter-select">
+						<option value="">Previous functions</option>
+						<option value="hipass">HIPASS</option>
+						<option value="alfalfa">ALFALFA</option>
+					</select>
+				</div>
+			</div>
+			<div class="row">
+				<strong><p class="col-lg-2 form-control-static">Axis range:</p></strong>
+			</div>	
+			<div class="row">
+				<p class="col-lg-4 form-control-static" id="axis-1-range-title">X axis</p>
+				<div class="col-lg-6 form-group">
+					<input data-help="axisrange" type="text" class="form-control" placeholder="From" id="axis-1-from"/>
+				</div>
+				<div class="col-lg-6 form-group">
+					<input data-help="axisrange" type="text" class="form-control" placeholder="To" id="axis-1-to"/>
+				</div>
+				<div class="col-lg-6 form-group">
+					<input data-help="axisrange" type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints"/>
+				</div> 
+			</div>
+			<div class="row">
+				<p class="col-lg-4 form-control-static" id="axis-2-range-title">Y axis</p>
+				<div class="col-lg-6 form-group">
+					<input data-help="axisrange" type="text" class="form-control" placeholder="From" id="axis-2-from"/>
+				</div>		
+				<div class="col-lg-6 form-group">
+					<input data-help="axisrange" type="text" class="form-control" placeholder="To" id="axis-2-to"/>
+				</div>
+				<div class="col-lg-6 form-group">
+					<input data-help="axisrange" type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints"/>
+				</div>
+			</div>
+			<div class="row form-group">
+				<p class="fixed-value-container form-control-static col-lg-4" style="display: none">
+					Fixed values
+				</p>
+				<div class="fixed-value-container col-lg-8" style="display: none">
+						<div class="input-group">
+				  			<input data-help="fixed" type="text" class="fixed-axis-input form-control" id="fixed-1-value"/>
+				  			<span class="input-group-addon" id="fixed-1-units"></span>
+						</div>
+				</div>
+				<div class="fixed-value-container col-lg-8" style="display: none">
+						<div class="input-group">
+				  			<input data-help="fixed" type="text" class="fixed-axis-input form-control" id="fixed-2-value"/>
+				  			<span class="input-group-addon" id="fixed-2-units"></span>
+						</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-lg-14">
+					<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+				  		<div class="panel panel-default">
+					    	<div class="panel-heading" role="tab" id="headingOne">
+					      		<h4 class="panel-title">
+					        		<a role="button" data-toggle="collapse" data-parent="#accordion" href="#aopb" aria-controls="aopb">Additional options</a>
+					    		</h4>
+					    	</div>
+						    <div id="aopb" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+								<div class="panel-body">
+									<h4>Telescope parameters</h4> 
+									<div class="form-group"><input data-help="dishsize" type="text" class="form-control" id="opt_dishsize" placeholder="Dish size"/></div>
+									<div class="form-group"><input data-help="fovne" type="text" class="form-control" id="opt_fovne" placeholder="Noise equivalent field of view"/></div>
+									<div class="row"><div class="col-lg-12">Frequency width (Hz)</div><div class="col-lg-12">Velocity width (km/s)</div></div>
+									<div class="row form-group">
+										<div class="col-lg-12"><input data-help="freqwidth" type="text" class="form-control" id="opt_freqwidth" value="50000"/></div>
+										<div class="col-lg-12"><input data-help="velwidth" type="text" class="form-control" id="opt_velwidth"/></div> 
+									</div>
+									<div class="form-group"><input data-help="fixedrms" type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)"/></div>
+									<h4>Cosmology</h4>
+									<div class="row form-group">
+										<div class="col-lg-12"><input data-help="cosmology" type="text" class="form-control" id="opt_h0" placeholder="Hubble constant" value="70"/></div>
+										<div class="col-lg-12"><input data-help="cosmology" type="text" class="form-control" id="opt_omegaM" placeholder="OmegaM" value="0.3"/></div>
+									</div>
+									<h4>Detection limits</h4>
+									<div class="form-group"><input data-help="snlim" type="text" class="form-control" id="opt_sn_lim" placeholder="Minimum S/N to detect galaxies"/></div>
+									<div class="row"><div class="col-lg-24">Schechter function bounds (log MHI)</div></div>
+									<div class="row form-group">
+										<div class="col-lg-12"><input data-help="schechterbounds" type="text" class="form-control" id="schechter-range-low" value="8.5"/></div>
+										<div class="col-lg-12"><input data-help="schechterbounds" type="text" class="form-control" id="schechter-range-high" value="11"/></div>
+									</div>
+								</div>
+						    </div>
+					  	</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-lg-4">
+					<button data-help="plotbtn" class="btn btn-success" id="plot_primary" disabled="disabled">Plot</button>
+				</div>
+				<div class="col-lg-9">
+					<div class="input-group">
+					  <input data-help="subprobeplot" type="text" class="form-control" id="fixed_x_probe"/>
+					  <div class="input-group-btn">
+						<button class="btn btn-default" id="plot_fixed_x" disabled="disabled">Plot at fixed X</button>
+					  </div>
+					</div>
+				</div>
+				<div class="col-lg-9">
+					<div class="input-group">
+					  <input data-help="subprobeplot" type="text" class="form-control" id="fixed_y_probe"/>
+					  <div class="input-group-btn">
+						<button class="btn btn-default" id="plot_fixed_y" disabled="disabled">Plot at fixed Y</button>
+					  </div>
+					</div>
+				</div>
 			</div>
 		</div>
-		<p class="col-lg-1 form-control-static text-right">Plot:</p>
-		<div class="col-lg-2">
-			<select class="form-control probe-select" id="plot-select">
-				<option value=""></option>
-				<option value="nhi">NHI</option>
-				<option value="rms">RMS Noise</option>
-				<option value="ss">Survey Speed</option>
-				<option value="n">N</option>
-				<option value="resolution">Resolution</option>
-				<option value="redshift">Redshift</option>
-				<option value="time">Time</option>
-				<option value="area">Area</option>
-			</select>
-		</div>
-		<div class="col-lg-3">
-			<div class="checkbox">
-			    <label>
-			      <input id="opt_use_physical_resolution" type="checkbox"/> Use physical resolution
-			    </label>
-			  </div>
-		</div>
-	</div>
-	<div class="row form-group">
-		<p class="col-lg-1 form-control-static">X axis</p>
-		<div class="col-lg-2">
-			<select class="axis-select form-control" id="axis-1-select" disabled="disabled">
-				<option value=""></option>
-				<option value="time">Time</option>
-				<option value="area">Area</option>
-				<option value="resolution">Resolution</option>
-				<option value="redshift">Redshift</option>
-				<option value="nhi">NHI</option>
-			</select>
-		</div>
-		<p class="col-lg-2 form-control-static">Y axis</p>
-		<div class="col-lg-2">
-			<select class="axis-select form-control" id="axis-2-select" disabled="disabled">
-				<option value=""></option>
-				<option value="area">Area</option>
-				<option value="time">Time</option>
-				<option value="resolution">Resolution</option>
-				<option value="redshift">Redshift</option>
-				<option value="nhi">NHI</option>
-			</select>
-		</div>
-	</div>
-	<div class="row schechter-parameters" style="display: none">
-		<p class="col-lg-1 form-control-static">Schechter HIMF</p>
-		<div class="col-lg-2">
-			<input type="text" class="schechter-parameter form-control" id="schechter-phistar" placeholder="Phi star"/>
-		</div>
-		<div class="col-lg-2">
-			<input type="text" class="schechter-parameter form-control" id="schechter-mhistar" placeholder="MHI star"/>
-		</div>
-		<div class="col-lg-2">
-			<input type="text" class="schechter-parameter form-control" id="schechter-alpha" placeholder="Alpha"/>
-		</div>
-		<div class="col-lg-2">
-			<select class="form-control" id="schechter-select">
-				<option value="">Previous functions</option>
-				<option value="hipass">HIPASS</option>
-				<option value="alfalfa">ALFALFA</option>
-			</select>
-		</div>
-	</div>
-	<div class="row form-group schechter-parameters" style="display: none">
-		<div class="col-lg-offset-1 col-lg-2">
-			<input type="text" class="schechter-parameter form-control" id="schechter-h0" placeholder="Hubble constant"/>
-		</div>
-	</div>
-	<div class="row">
-		<strong><p class="col-lg-2 form-control-static">Axis range:</p></strong>
-	</div>	
-	<div class="row">
-		<p class="col-lg-1 form-control-static" id="axis-1-range-title">X axis</p>
-		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="From" id="axis-1-from"/>
-		</div>
-		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="To" id="axis-1-to"/>
-		</div>
-		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="Number of points" id="axis-1-npoints"/>
+		<div class="col-lg-8 hidden-sm hidden-xs">
+			<div class="panel panel-info">
+				<div class="panel-heading"><h3 class="panel-title">Information</h3></div>
+				<div class="panel-body" id="help">
+					Welcome to the HI survey planning tool.
+				</div>
+			</div>
 		</div> 
 	</div>
-	<div class="row">
-		<p class="col-lg-1 form-control-static" id="axis-2-range-title">Y axis</p>
-		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="From" id="axis-2-from"/>
-		</div>		
-		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="To" id="axis-2-to"/>
-		</div>
-		<div class="col-lg-2 form-group">
-			<input type="text" class="form-control" placeholder="Number of points" id="axis-2-npoints"/>
-		</div>
-	</div>
-	<div class="row form-group">
-		<p class="fixed-value-container form-control-static col-lg-1" style="display: none">
-			Fixed values
-		</p>
-		<div class="fixed-value-container col-lg-3" style="display: none">
-				<div class="input-group">
-		  			<input type="text" class="fixed-axis-input form-control" id="fixed-1-value"/>
-		  			<span class="input-group-addon" id="fixed-1-units"></span>
-				</div>
-		</div>
-		<div class="fixed-value-container col-lg-3" style="display: none">
-				<div class="input-group">
-		  			<input type="text" class="fixed-axis-input form-control" id="fixed-2-value"/>
-		  			<span class="input-group-addon" id="fixed-2-units"></span>
-				</div>
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-lg-5">
-			<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-		  		<div class="panel panel-default">
-			    	<div class="panel-heading" role="tab" id="headingOne">
-			      		<h4 class="panel-title">
-			        		<a role="button" data-toggle="collapse" data-parent="#accordion" href="#aopb" aria-controls="aopb">Additional options</a>
-			    		</h4>
-			    	</div>
-				    <div id="aopb" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
-						<div class="panel-body">
-							<h4>Telescope parameters</h4> 
-							<div class="form-group"><input type="text" class="form-control" id="opt_dishsize" placeholder="Dish size"/></div>
-							<div class="form-group"><input type="text" class="form-control" id="opt_fovne" placeholder="Noise equivalent field of view"/></div>
-							<div class="row"><div class="col-lg-6">Frequency width (Hz)</div><div class="col-lg-6">Velocity width (km/s)</div></div>
-							<div class="row form-group">
-								<div class="col-lg-6"><input type="text" class="form-control" id="opt_freqwidth" value="50000"/></div>
-								<div class="col-lg-6"><input type="text" class="form-control" id="opt_velwidth"/></div> 
-							</div>
-							<div class="form-group"><input type="text" class="form-control" id="opt_fixed_rms" placeholder="Fixed RMS value (mJy)"/></div>
-							<h4>Cosmology</h4>
-							<div class="row form-group">
-								<div class="col-lg-6"><input type="text" class="form-control" id="opt_h0" placeholder="Hubble constant" value="70"/></div>
-								<div class="col-lg-6"><input type="text" class="form-control" id="opt_omegaM" placeholder="OmegaM" value="0.3"/></div>
-							</div>
-							<h4>Detection limits</h4>
-							<div class="form-group"><input type="text" class="form-control" id="opt_sn_lim" placeholder="Minimum S/N to detect galaxies"/></div>
-							<div class="row"><div class="col-lg-12">Schechter function bounds (log MHI)</div></div>
-							<div class="row form-group">
-								<div class="col-lg-6"><input type="text" class="form-control" id="schechter-range-low" value="8.5"/></div>
-								<div class="col-lg-6"><input type="text" class="form-control" id="schechter-range-high" value="11"/></div>
-							</div>
-						</div>
-				    </div>
-			  	</div>
-			</div>
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-lg-1">
-			<button class="btn btn-success" id="plot_primary" disabled="disabled">Plot</button>
-		</div>
-		<div class="col-lg-3">
-			<div class="input-group">
-			  <input type="text" class="form-control" id="fixed_x_probe"/>
-			  <div class="input-group-btn">
-				<button class="btn btn-default" id="plot_fixed_x" disabled="disabled">Plot at fixed X</button>
-			  </div>
-			</div>
-		</div>
-		<div class="col-lg-3">
-			<div class="input-group">
-			  <input type="text" class="form-control" id="fixed_y_probe"/>
-			  <div class="input-group-btn">
-				<button class="btn btn-default" id="plot_fixed_y" disabled="disabled">Plot at fixed Y</button>
-			  </div>
-			</div>
-		</div>
-	</div>
 	<div class="row" style="padding-top:20px">
-		<div class="col-lg-12">
+		<div class="col-lg-24">
 			<div id="plot"></div>
 		</div>
 	</div>
 	<div class="row">
-		<div class="col-lg-12">
+		<div class="col-lg-24">
 			<div id="detailPlot1"></div>
 		</div>
 	</div>
 	<div class="row">
-		<div class="col-lg-12">
+		<div class="col-lg-24">
 			<div id="detailPlot2"></div>
 		</div>
 	</div>

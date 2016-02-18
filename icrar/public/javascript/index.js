@@ -18,6 +18,26 @@ var schechter_params = { // Schechter parameter values from previous survey pape
 		alpha: -1.33
 	}
 };
+var help_text = {
+	telescope: "Select the telescope to use. Each telescope has a different performance table obtained from MIRIAD simulations (typically simulated at 8hr, 50kHz).",
+	plot: "Select the metric to plot. This will be the z axis for the contour plot and y axis for 1D plots.",
+	physical_resolution: "Use kiloparsec resolution units instead of arcseconds.",
+	axes: "Choose the X and Y axis of the contour plot. Either axis can be used later for a 1D plot.",
+	schechter: "The Schechter HIMF to use for predicting number of galaxies. This is used in place of the simulated galaxy catalogue from Duffy et al. (2012) and is integrated for each mass bin. See: Duffy, A. R. et al. (2012). \"Predictions for ASKAP neutral hydrogen surveys\". In: Monthly Notices of the Royal Astronomical Society 426, pp. 3385–3402.",
+	schechter_func: "Previous Schechter functions from other papers. See: Zwaan, M. A. et al. (2005). \"The HIPASS catalogue: ΩHI and environmental effects on the HI mass function of galaxies\". In: Monthly Notices of the Royal Astronomical Society 359, pp. L30–L34. Duffy, A. R. et al. (2012). \"Predictions for ASKAP neutral hydrogen surveys\". In: Monthly Notices of the Royal Astronomical Society 426, pp. 3385–3402.",
+	axisrange: "The plots are run using a gridded axis (end point exclusive). Each point represents a sample from the specified z axis, so adjust the axis range accordingly. Larger number of points may be slow depending on computer speed.",
+	fixed: "These must be fixed to a set value to allow solving for the z axis value. They are based off the X and Y axes you chose.",
+	dishsize: "The telescope dish size (m). Will be filled in automatically from your telescope choice if left blank",
+	fovne: "Fix noise equivalent field of view as a function of frequency, e.g. if using PAF rather than single pixel feed.",
+	freqwidth: "The frequency width of the telescope in Hz. Defaults to 50kHz.",
+	velwidth: "The velocity width of the telescope in km/s.",
+	fixedrms: "Fixes the RMS noise to a constant value in mJy instead of varying it based on resolution.",
+	cosmology: "The default cosmology assumes Hubble constant 70 and Omega<sub>M</sub> at 0.3. Omega<sub>L</sub> will be recalculated from Omega<sub>M</sub>. Omega<sub>k</sub> assumed to be 0.",
+	snlim: "The signal/noise ratio that must be achieved before a galaxy mass bin is considered detectable. Defaults to 5.",
+	schechterbounds: "The cutoff mass limits for the Schechter function. Defaults to 8.5 and 11, but the Schechter function may be defined over a larger or smaller range. Smaller bounds may be faster",
+	plotbtn: "Plots the contour plot. Hover over a point to see the 1D plots at that point, and click on the graph to fix the 1D plots at that point. Click again to unfix the 1D plots. All plot data can be downloaded by clicking on the floppy drive icon.",
+	subprobeplot: "Fix a value and show the resulting 1D plot. All plot data can be downloaded by clicking the floppy drive icon."
+}
 // Parameter axis titles etc.
 var param_info = {
 	redshift: {
@@ -38,7 +58,7 @@ var param_info = {
 	resolution: {
 		title: "Angular Resolution",
 		units: "Arcseconds",
-		title_lower: "resolution"
+		title_sentence: "resolution"
 	},
 	nhi: {
 		title: "NHI",
@@ -58,7 +78,7 @@ var param_info = {
 		title_sentence: "RMS"
 	},
 	n: {
-		title: "Number of galaxies"
+		title: "Number of galaxies",
 	}
 }
 var telescope; // current telescope downlaoded from server
@@ -75,11 +95,6 @@ function download_data(base_filename, data, ext) {
 	document.body.appendChild(elem);
 	elem.click();
 	document.body.removeChild(elem);
-}
-
-function get_axis_value(data, x, axis, range) {
-	var range_val = range.from + x * (range.to - range.from) / range.npoints;
-	return range_val;
 }
 
 function get_axis_title(axis) {
@@ -114,7 +129,7 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 		input = e.data.input;
 		var x = e.data.x, y = e.data.y, z = e.data.z;
 
-		prev_input = input;
+		prev_input = input; // save data for replotting 1D plots
 		prev_x = x;
 		prev_y = y;
 		prev_z = z;
@@ -162,7 +177,7 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 			    	}
 			    	data += "\n";
 			    	data += axes[0] + "\t" + axes[1] + "\t" + plot_axis + "\n";
-			    	for (var i = 0; i < size; i++) {
+			    	for (var i = 0; i < axis_sizes[0].npoints * axis_sizes[1].npoints; i++) {
 			    		data += prev_x[i] + "\t" + prev_y[i] + "\t" + prev_z[i] + "\n";
 			    	}
 			    	download_data("icrar_contour_data", data);
@@ -284,24 +299,6 @@ function replot(cb) {
 	}
 }
 
-function subplot_downloader(info, x, y) {
-	return function (gd) {
-		var data = "Fixed: ";
-		var fixed_axes = info.fixed_axes;
-		for (var i = 0; i < 2; i++) {
-			data += info.fixed_axes[i] + "\t" + info.input[info.fixed_axes[i]] + ",";
-		}
-		data += info.fixed_axis.fixed_name + "\t" + info.fixed_axis.value; 
-		data += "\n";
-		data += info.fixed_axis.name + "\t" + info.plot_axis + "\n";
-		for (var i = 0; i < info.x.length; i++) {
-			data += info.x[i] + "\t" + info.y[i] + "\n";
-		}
-		download_data("icrar_data", data);
-	}
-}
-
-
 function plot_subprobe(plot_target, fixed_axes, input, data, plot_axis, fixed_axis, x, y) {
 	var xaxis = {title: get_pretty_axis_title(fixed_axis.name)};
 	if (fixed_axis.name !== "redshift") {
@@ -319,8 +316,8 @@ function plot_subprobe(plot_target, fixed_axes, input, data, plot_axis, fixed_ax
 		}
 		both.sort(function (a, b) {
 			return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0;
-		});
-		for (var j = 0; j < both.length; j++) {
+		}); 
+		for (var j = 0; j < x.length; j++) {
 			x[j] = both[j][0];
 			y[j] = both[j][1];
 			if (j > 0) {
@@ -366,6 +363,12 @@ function plot_subprobe(plot_target, fixed_axes, input, data, plot_axis, fixed_ax
 	plotting_subprobe = false;
 }
 
+/*
+Replots the 1D plot for the current axes at a fixed x or y at the given value.
+
+fixed_axis: "x" or "y"
+fixed_value: The value to fix the parameter at
+*/
 function replot_specific_subprobe(fixed_axis, fixed_value) {
 	if (plotting_subprobe) return;
 	plotting_subprobe = true;	
@@ -449,6 +452,23 @@ function replot_subprobe() {
 			);
 		}
 	});
+}
+
+function subplot_downloader(info, x, y) {
+	return function (gd) {
+		var data = "Fixed: ";
+		var fixed_axes = info.fixed_axes;
+		for (var i = 0; i < 2; i++) {
+			data += info.fixed_axes[i] + "\t" + info.input[info.fixed_axes[i]] + ",";
+		}
+		data += info.fixed_axis.fixed_name + "\t" + info.fixed_axis.value; 
+		data += "\n";
+		data += info.fixed_axis.name + "\t" + info.plot_axis + "\n";
+		for (var i = 0; i < info.x.length; i++) {
+			data += info.x[i] + "\t" + info.y[i] + "\n";
+		}
+		download_data("icrar_data", data);
+	}
 }
 
 /*
@@ -575,7 +595,7 @@ $(function() {
 		}
 		replot_subprobe();
 		last_pt = fixed_subaxis_pt;
-		next_plot = Date.now() + 4000;
+		next_plot = Date.now() + 2000;
 	});
 
 	$(".fixed-value-container").css('display', 'none');
@@ -662,5 +682,10 @@ $(function() {
 
 	$("#plot_fixed_y").click(function(e) {
 		replot_specific_subprobe("y", parseFloat($("#fixed_y_probe").val()));
+	});
+
+	help_text.default = $("#help").html();
+	$("[data-help]").on('focusin', function() {
+		$("#help").html(help_text[$(this).data('help')]);
 	});
 });

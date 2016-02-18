@@ -1,5 +1,6 @@
 production.ini
 report/report-blx.bib
+report/*.blg
 report/*.aux
 report/*.pdf
 report/*.bbl
