@@ -161,6 +161,8 @@ The changes to the interface such as determining which values need to be fixed a
 The \texttt{replot} function then creates a Web Worker, which is an asynchronous calculator used to avoid freezing the main webpage while calculations are being performed. The code for the Web Worker begins inside \verb|public/javascript/param_calculator.js|. First, arrays of x, y and z data are created inside the \texttt{onmessage} function. These are spaced on a simple grid given by the user. The arrays are then filled by calling the function \verb|level_function| which solves for the plot parameter. \verb|level_function| performs the majority of the algorithms listed in Appendix \ref{sec:algorithms}. \verb|param_calculator.js| then passes the filled arrays back to \verb|index.js|. 
 
 At this point, the \texttt{plot} function will send the data to Plotly.js, a Javascript plotting library which will actually display the data and handle hover and click events. \texttt{plot} also overrides the default Plotly.js buttons to add a download data button which will download a tab-separated file of the plotting arrays. An overall flow chart of this process is shown in Figure \ref{fig:flowcode}.
+\section{Conclusion}
+The website is online at skaplanner.icrar.org and should be relatively easy to extend.
 \appendix
 \section{Algorithm listing}
 \label{sec:algorithms}
@@ -326,6 +328,8 @@ tsys
 0.384	2.65575
 0.392	2.7595
 \end{verbatim}
+\subsection{Adding a new telescope}
+A new telescope file can be added at any time by putting a new .telescope file inside the config/ directory. Python will automatically load it and send it to the client.
 
 \section{Bibliography}
 \printbibliography

@@ -3,6 +3,10 @@ report/report-blx.bib
 report/*.aux
 report/*.pdf
 report/*.bbl
+report/*.log
+report/*.gz
+report/*.xml
+report/*.out
 
 *.py[co]
 *.pyc
