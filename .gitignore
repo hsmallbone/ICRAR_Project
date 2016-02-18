@@ -1,4 +1,8 @@
 production.ini
+report/report-blx.bib
+report/*.aux
+report/*.pdf
+report/*.bbl
 
 *.py[co]
 *.pyc

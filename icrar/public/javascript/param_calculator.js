@@ -16,18 +16,20 @@ onmessage = function (e) {
 	}
 	var size = axis_sizes[0].npoints * axis_sizes[1].npoints, x = new Array(size), y = new Array(size), z = new Array(size);
 	var iterations = 0;
+	// Plot level_function over the grid defined by the user
 	for (var i = 0; i < axis_sizes[0].npoints; i++) {
 		for (var j = 0; j < axis_sizes[1].npoints; j++) {
 			var idx = i * axis_sizes[1].npoints + j;
-			x[idx] = get_axis_value(data, i, axes[0], axis_sizes[0]);
+			x[idx] = get_axis_value(data, i, axes[0], axis_sizes[0]); // space grid values
 			y[idx] = get_axis_value(data, j, axes[1], axis_sizes[1]);
 			input[axes[0]] = x[idx];
 			input[axes[1]] = y[idx];
+			 // need an observation volume for plotting 'n', so take the previous redshift value for the volume
 			var range = axes[0] === "redshift" ? axis_sizes[0] : axis_sizes[1];
 			input.last_redshift = input.redshift - (range.to - range.from)/range.npoints;
 			z[idx] = level_function(data, input, plot_axis);
-			if (iterations++ > 2000) {
-				postMessage({progress: 100 * ((i * axis_sizes[1].npoints + j) / size)});
+			if (iterations++ > 2000) { // report progress back to the main thread for the Nanobar
+				postMessage({progress: 90 * ((i * axis_sizes[1].npoints + j) / size)}); // copying the arrays at the end is roughly 10% of the total time
 				iterations = 0;
 			}
 		} 
@@ -62,8 +64,7 @@ range: An object describing the range in form:
 }
 */
 function get_axis_value(data, x, axis, range) {
-	var range_val = range.from + x * (range.to - range.from)/range.npoints;
-	return range_val;
+	return range.from + x * (range.to - range.from) / range.npoints;
 }
 
 /*
@@ -167,7 +168,7 @@ function level_function(data, input, plot_axis) {
 	} else {
 		var omega_b = calc_omega_b(z, c, dishsize);
 	}
-	var npointings = input.area ? input.area/omega_b : 1;
+	var npointings = input.area ? input.area / omega_b : 1;
 
 	var rms = new Float64Array(data.telescope.params.length), nhi = new Float64Array(data.telescope.params.length), beam = new Float64Array(data.telescope.params.length),
 	log_nhi = new Float64Array(data.telescope.params.length), log_beamsize = new Float64Array(data.telescope.params.length), ss = new Float64Array(data.telescope.params.length),
