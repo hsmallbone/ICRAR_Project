@@ -1,5 +1,5 @@
 \documentclass[11pt]{article}
-\usepackage[backend=bibtex,style=authoryear,citestyle=authoryear]{biblatex}
+\usepackage[backend=bibtex,style=authoryear,citestyle=authoryear,doi=false,eprint=false]{biblatex}
 \usepackage{graphicx, float, hyperref, relsize, multicol, geometry, tikz, caption}
 \usepackage[ruled,noline,linesnumbered]{algorithm2e}
 \usepackage[utf8]{inputenc}
@@ -66,7 +66,7 @@ An example of this can be seen in Figure \ref{fig:beamss}, a comparison graph of
 
 \subsection{Tools}
 
-The website has two chief components: a web server and a client which must display plots using scaling relations and equations from \parencite{duffy}.
+The website has two chief components: a web server and a client which must display plots using scaling relations and equations from \textcite{duffy}.
 
 \subsubsection{Web server}
 The web server is written using TurboGears 2 \parencite{turbogears}, a Python program that implements a Model-View-Controller paradigm. The server for the project relies chiefly on scipy \parencite{scipy} to perform integral calculations to predict galaxy detections and solve rotation equations. The server exposes some JSON endpoints to facilitate seamless communication between the client and the server. All telescope performance data is stored on the server.
@@ -77,10 +77,10 @@ The client is responsible firstly for displaying plots and allowing the user to 
 The client also performs the majority of the scaling relations and simple equation solving to avoid placing load on the server for repetitive tasks. These are done inside Web Workers, a newer feature in web browsers that allows asynchronous calculation of large plotting arrays.
 
 \subsubsection{Running the server}
-The python requirements to actually run TurboGears can be set up by executing the setup.sh bash script inside the icrar directory. The server can then be run by executing the run.sh file.
+The python requirements to run TurboGears can be set up by executing the \verb|setup.sh| bash script inside the icrar directory. The server can then be run using the \verb|run.sh| file.
 
 \subsection{Algorithms}
-As outlined in \parencite{popping2014}, the general approach of the tool is to scale MIRIAD simulation data to obtain values for various parameters and to solve for any missing ones. This is achieved by structuring the program in such a way that four parameters of [NHI, redshift, observation area, observation time and beam resolution] are specified when plotting is required, and the missing parameter can then be solved easily. A full listing of the various cases is available in equations \ref{eqn:scaletables}-\ref{eqn:solverms}.
+As outlined in \textcite{popping2014}, the general approach of the tool is to scale MIRIAD simulation data to obtain values for various parameters and to solve for any missing ones. This is achieved by structuring the program in such a way that four parameters of [NHI, redshift, observation area, observation time and beam resolution] are specified when plotting is required, and the missing parameter can then be solved easily. A full listing of the various cases is available in Algorithms \ref{eqn:scaletables}-\ref{eqn:solverms} (Appendix \ref{sec:algorithms}).
 
 When determining a value for the number of detectable galaxies, the website follows the method outlined in \textcite{duffy}, which uses a HI mass function and simulated galaxy catalogue in order to provide estimates of kinematic profiles and galaxy density needed to arrive at a reasonable detection prediction inside an observation volume. This process is outlined in Algorithm \ref{eqn:solven}. The website makes the following assumptions, mostly in line with the method from \textcite[p. 8]{duffy}.
 
@@ -161,6 +161,9 @@ The changes to the interface such as determining which values need to be fixed a
 The \texttt{replot} function then creates a Web Worker, which is an asynchronous calculator used to avoid freezing the main webpage while calculations are being performed. The code for the Web Worker begins inside \verb|public/javascript/param_calculator.js|. First, arrays of x, y and z data are created inside the \texttt{onmessage} function. These are spaced on a simple grid given by the user. The arrays are then filled by calling the function \verb|level_function| which solves for the plot parameter. \verb|level_function| performs the majority of the algorithms listed in Appendix \ref{sec:algorithms}. \verb|param_calculator.js| then passes the filled arrays back to \verb|index.js|. 
 
 At this point, the \texttt{plot} function will send the data to Plotly.js, a Javascript plotting library which will actually display the data and handle hover and click events. \texttt{plot} also overrides the default Plotly.js buttons to add a download data button which will download a tab-separated file of the plotting arrays. An overall flow chart of this process is shown in Figure \ref{fig:flowcode}.
+
+\section{Conclusion}
+The website is available at \url{http://skaplanner.icrar.org}, and has been deployed using Apache on the ICRAR webservers. The source code for the tool is also available on Github at \url{https://github.com/hsmallbone/ICRAR_Project}.
 
 \appendix
 \section{Algorithm listing}
@@ -329,6 +332,13 @@ tsys
 \end{verbatim}
 \subsection{Adding a new telescope}
 A new telescope file can be added at any time by putting a new .telescope file inside the config/ directory. Python will automatically load it and send it to the client.
+\section{Adding a new plot parameter}
+\begin{enumerate}
+\item Add a new short name to the \verb|possible_plot_parameters| array in \verb|index.js|.
+\item Add a new option in the HTML select inside \verb|index.html|.
+\item Add a new entry inside the \verb|param_info| dictionary to describe the units and name of the new parameter.
+\item Implement a new else if case inside \verb|param_calculator.js| for the new short parameter name.
+\end{enumerate}
 
 \section{Bibliography}
 \printbibliography

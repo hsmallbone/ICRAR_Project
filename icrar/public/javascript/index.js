@@ -1,9 +1,7 @@
-var disable_subaxis_hover;
-var fixed_subaxis_pt;
-var prev_x, prev_y, prev_z, prev_axes, prev_axes_sizes, prev_input; 
+var prev_x, prev_y, prev_z, prev_axes, prev_axes_sizes, prev_input; // previous input values, for 1D graphs
 var axes = ["", ""], plot_axis;
-var possible_parameters = ["redshift", "resolution", "area", "time", "nhi"]; // Available axes
-var possible_plot_parameters = ["redshift", "resolution", "area", "nhi", "time", "rms", "ss", "n"]; // Parameters that can be plotted 
+var possible_parameters = ["redshift", "resolution", "area", "time", "nhi"]; // Available axes to choose from, used for determining which parameters to fix
+var possible_plot_parameters = ["redshift", "resolution", "area", "nhi", "time", "rms", "ss", "n"]; // Parameters that can be plotted as the z or y axis
 var schechter_params = { // Schechter parameter values from previous survey papers
 	hipass: {
 		mhistar: 9.79,
@@ -18,14 +16,14 @@ var schechter_params = { // Schechter parameter values from previous survey pape
 		alpha: -1.33
 	}
 };
-var help_text = {
+var help_text = { // data-help attributes on HTML elements can reference this table to display help in the right hand side of the website
 	telescope: "Select the telescope to use. Each telescope has a different performance table obtained from MIRIAD simulations (typically simulated at 8hr, 50kHz).",
 	plot: "Select the metric to plot. This will be the z axis for the contour plot and y axis for 1D plots.",
 	physical_resolution: "Use kiloparsec resolution units instead of arcseconds.",
 	axes: "Choose the X and Y axis of the contour plot. Either axis can be used later for a 1D plot.",
 	schechter: "The Schechter HIMF to use for predicting number of galaxies. This is used in place of the simulated galaxy catalogue from Duffy et al. (2012) and is integrated for each mass bin. See: Duffy, A. R. et al. (2012). \"Predictions for ASKAP neutral hydrogen surveys\". In: Monthly Notices of the Royal Astronomical Society 426, pp. 3385–3402.",
 	schechter_func: "Previous Schechter functions from other papers. See: Zwaan, M. A. et al. (2005). \"The HIPASS catalogue: ΩHI and environmental effects on the HI mass function of galaxies\". In: Monthly Notices of the Royal Astronomical Society 359, pp. L30–L34. Duffy, A. R. et al. (2012). \"Predictions for ASKAP neutral hydrogen surveys\". In: Monthly Notices of the Royal Astronomical Society 426, pp. 3385–3402.",
-	axisrange: "The plots are run using a gridded axis (end point exclusive). Each point represents a sample from the specified z axis, so adjust the axis range accordingly. Larger number of points may be slow depending on computer speed.",
+	axisrange: "The plots are run using a gridded axis (start/end point inclusive). Each point represents a sample from the specified z axis, so adjust the axis range accordingly. Larger number of points may be slow depending on computer speed.",
 	fixed: "These must be fixed to a set value to allow solving for the z axis value. They are based off the X and Y axes you chose.",
 	dishsize: "The telescope dish size (m). Will be filled in automatically from your telescope choice if left blank",
 	fovne: "Fix noise equivalent field of view as a function of frequency, e.g. if using PAF rather than single pixel feed.",
@@ -38,7 +36,7 @@ var help_text = {
 	plotbtn: "Plots the contour plot. Hover over a point to see the 1D plots at that point, and click on the graph to fix the 1D plots at that point. Click again to unfix the 1D plots. All plot data can be downloaded by clicking on the floppy drive icon.",
 	subprobeplot: "Fix a value and show the resulting 1D plot. All plot data can be downloaded by clicking the floppy drive icon."
 }
-// Parameter axis titles etc.
+// Parameter axis titles and units
 var param_info = {
 	redshift: {
 		title: "Redshift",
@@ -81,8 +79,8 @@ var param_info = {
 		title: "Number of galaxies",
 	}
 }
-var telescope; // current telescope downlaoded from server
-var cached_telescopes = {};
+var telescope; // currently selected telescope name
+var cached_telescopes = {}; // cache of telescope data from server
 
 /*
 Helper function to download a string as a file for the user
@@ -114,6 +112,28 @@ function get_pretty_axis_title(axis) {
 
 /*
 The main plotting function, taking telescope data, fixed input, the axis to plot against and axis sizes, and a callback
+
+Input shapes: 
+data: {
+	telescope: {
+		params: [{
+			beam,
+			rms,
+			nhi,
+			ss 
+		}]
+	}
+	redshift: [redshift values...]
+	tsys: [tsys values...]
+	beam: [beam values...]
+}
+axis_sizes: [
+	{
+		from,
+		to,
+		npoints
+	}...
+]
 */
 function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 	var input = $.extend({}, fixed_input); // copy fixed input array
@@ -193,7 +213,21 @@ function plot(data, fixed_input, plot_axis, axis_sizes, cb) {
 }
 
 /*
-Returns telescope data such as Tsys/redshift curves from the server.
+Returns telescope data such as Tsys/redshift curves from the server to the given callback.
+Callback data format:
+{
+	telescope: {
+		params: [{
+			beam,
+			rms,
+			nhi,
+			ss 
+		}]
+	}
+	redshift: [redshift values...]
+	tsys: [tsys values...]
+	beam: [beam values...]
+}
 */
 function getTelescopeData(name, cb) {
 	if (cached_telescopes[name]) { cb(cached_telescopes[name]); }
@@ -208,7 +242,7 @@ function getTelescopeData(name, cb) {
 }
 
 /*
-Given a boolean variable in succ, sets Bootstrap error states on the given prefix and suffix DOM elements.
+Given a boolean value in succ, sets Bootstrap error states on the given prefix and suffix DOM elements, joined by '-'.
 */
 function validate(succ, prefix, suffix) {
 	if (!(suffix instanceof Array)) {
@@ -241,6 +275,9 @@ function get_axis_size_dict(n, axis) {
 	return d;
 }
 
+/*
+Given a destination dictionary and array of option names, fill the dictionary using the float value of the DOM elements with ID #opt_<name> as specified in the array.
+*/
 function set_opts(input, names) {
 	for (var i = 0; i < names.length; i++) {
 		var $e = $("#opt_" + names[i]);
@@ -299,7 +336,10 @@ function replot(cb) {
 	}
 }
 
-function plot_subprobe(plot_target, fixed_axes, input, data, plot_axis, fixed_axis, x, y) {
+/*
+Plots a 1D array with title at the specified 'plot_target' DOM ID and input parameters.
+*/
+function plot_subprobe(plot_target, fixed_axes, input, plot_axis, fixed_axis, x, y) {
 	var xaxis = {title: get_pretty_axis_title(fixed_axis.name)};
 	if (fixed_axis.name !== "redshift") {
 		xaxis.type = 'log';
@@ -405,7 +445,7 @@ function replot_specific_subprobe(fixed_axis, fixed_value) {
 			input = e.data.input;
 			var x = e.data.x, y = e.data.z;
 			$("#plot,#detailPlot2").html("");
-			plot_subprobe('detailPlot1', fixed, input, data, plot_axis, 
+			plot_subprobe('detailPlot1', fixed, input, plot_axis, 
 				{
 					name: xaxis_name, 
 				 	value: fixed_value, 
@@ -418,8 +458,11 @@ function replot_specific_subprobe(fixed_axis, fixed_value) {
 	});
 }
 
+/*
+Plots the two 1D graphs at the specified fixed point using the previous x, y, z arrays.
+*/
 var plotting_subprobe = false;
-function replot_subprobe() {
+function replot_subprobe(fixed_subaxis_pt) {
 	if (plotting_subprobe) return;
 	plotting_subprobe = true;
 	getTelescopeData(telescope, function (data) {
@@ -442,7 +485,7 @@ function replot_subprobe() {
 				}
 				y.push(prev_z[idx]);
 			}
-			plot_subprobe('detailPlot' + i, get_fixed_axes(prev_axes), prev_input, data, plot_axis, 
+			plot_subprobe('detailPlot' + i, get_fixed_axes(prev_axes), prev_input, plot_axis, 
 				{
 					name: xaxis_name,
 				 	value: fixed_x ? fixed_subaxis_pt.x : fixed_subaxis_pt.y, 
@@ -577,10 +620,12 @@ $(function() {
 		updateUI("fixed_axis");
 	});
 
+	var disable_subaxis_hover; // if true: disable updating the 1D graphs while hovering over the contour plot
+	var fixed_subaxis_pt; // the last clicked / hovered point on the graph
 	$("#plot").on('plotly_click', function (e, pts) {
 		disable_subaxis_hover = !disable_subaxis_hover;
 		fixed_subaxis_pt = pts.points[0];
-		replot_subprobe(); 
+		replot_subprobe(fixed_subaxis_pt); 
 	});
 
 	var last_pt, next_plot = Date.now();
@@ -593,7 +638,7 @@ $(function() {
 		if (Date.now() < next_plot) {
 			return;
 		}
-		replot_subprobe();
+		replot_subprobe(fixed_subaxis_pt);
 		last_pt = fixed_subaxis_pt;
 		next_plot = Date.now() + 2000;
 	});

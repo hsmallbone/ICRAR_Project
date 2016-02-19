@@ -26,7 +26,7 @@ onmessage = function (e) {
 			input[axes[1]] = y[idx];
 			 // need an observation volume for plotting 'n', so take the previous redshift value for the volume
 			var range = axes[0] === "redshift" ? axis_sizes[0] : axis_sizes[1];
-			input.last_redshift = input.redshift - (range.to - range.from)/range.npoints;
+			input.last_redshift = input.redshift - (range.to - range.from)/Math.max(1, range.npoints - 1);
 			z[idx] = level_function(data, input, plot_axis);
 			if (iterations++ > 2000) { // report progress back to the main thread for the Nanobar
 				postMessage({progress: 90 * ((i * axis_sizes[1].npoints + j) / size)}); // copying the arrays at the end is roughly 10% of the total time
@@ -64,7 +64,7 @@ range: An object describing the range in form:
 }
 */
 function get_axis_value(data, x, axis, range) {
-	return range.from + x * (range.to - range.from) / range.npoints;
+	return range.from + x * (range.to - range.from) / Math.max(1, range.npoints - 1);
 }
 
 /*
@@ -130,6 +130,30 @@ function get_interpolated_beamsize(obstime_sp, freqwidth, log_nhi, log_beamsize,
 	return Math.pow(10, log_syn_beamsize);
 }
 
+/*
+Solve variable indicated in 'plot_axis' using the input and telescope data provided.
+data format: {
+	telescope: {
+		params: [{
+			beam,
+			rms,
+			nhi,
+			ss 
+		}]
+	}
+	redshift: [redshift values...]
+	tsys: [tsys values...]
+	beam: [beam values...]
+}
+input data format: {
+	redshift,
+	nhi,
+	resolution,
+	time,
+	area,
+	(additional options as specified in index.js)
+}
+*/
 function level_function(data, input, plot_axis) {
 	/*
 	Initial setup of variables
