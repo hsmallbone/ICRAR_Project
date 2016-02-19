@@ -571,6 +571,8 @@ $(function() {
 			var p = param_info[axes[i-1]];
 			$(prefix + "-range-title").text(p ? p.title : i === 1 ? "X axis" : "Y axis");
 		}
+		axes[0] = $("#axis-1-select").val();
+		axes[1] = $("#axis-2-select").val();
 		$("#plot_fixed_x").text("Plot at fixed " + (axes[0] ? param_info[axes[0]].title_sentence : "X"));
 		$("#plot_fixed_y").text("Plot at fixed " + (axes[1] ? param_info[axes[1]].title_sentence : "Y"));
 		if (!axes[0] || !axes[1] || axes[0] === axes[1]) {
@@ -674,18 +676,11 @@ $(function() {
 				html += "<option value='" + possible_parameters[i] + "'>" + get_axis_title(possible_parameters[i]) + "</option>";
 			}
 		}
-		$(".axis-select").html(html).prop('disabled', false);
-
+		$(".axis-select").html(html).prop('disabled', false); 
 		updateUI("plot_axis");
 	});
 
 	$(".axis-select").change(function() {
-		var v = $(this).val();
-		if (this.id === "axis-1-select") {
-			axes[0] = v;
-		} else {
-			axes[1] = v;
-		}
 		updateUI("axes");
 	});
 	
