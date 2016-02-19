@@ -576,12 +576,13 @@ $(function() {
 			param_info.resolution.title = "Angular Resolution";
 			param_info.resolution.units = "Arcseconds";
 		}
+
 		for (var i = 1; i <= 2; i++) {
 			var prefix = "#axis-" + i;
 			var p = param_info[axes[i-1]];
 			$(prefix + "-range-title").text(p ? p.title : i === 1 ? "X axis" : "Y axis");
 		}
-		
+
 		$("#plot_fixed_x").text("Plot at fixed " + (axes[0] ? param_info[axes[0]].title_sentence : "X"));
 		$("#plot_fixed_y").text("Plot at fixed " + (axes[1] ? param_info[axes[1]].title_sentence : "Y"));
 		if (!axes[0] || !axes[1] || axes[0] === axes[1]) {
@@ -717,6 +718,12 @@ $(function() {
 	$("#plot_primary").click(function(e) {
 		replot();
 	});
+
+	var plot_select_html = "<option value=''></option>";
+	for (var i = 0; i < possible_plot_parameters.length; i++) {
+		plot_select_html += "<option value='" + possible_plot_parameters[i] + "'>" + get_axis_title(possible_plot_parameters[i]) + "</option>";
+	}
+	$("#plot-select").html(plot_select_html);
 
 	$("#plot_fixed_x").click(function(e) {
 		replot_specific_subprobe("x", parseFloat($("#fixed_x_probe").val()));
