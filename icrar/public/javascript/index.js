@@ -566,11 +566,6 @@ $(function() {
 	}
 
 	function updateUI(changed) {
-		for (var i = 1; i <= 2; i++) {
-			var prefix = "#axis-" + i;
-			var p = param_info[axes[i-1]];
-			$(prefix + "-range-title").text(p ? p.title : i === 1 ? "X axis" : "Y axis");
-		}
 		axes[0] = $("#axis-1-select").val();
 		axes[1] = $("#axis-2-select").val();
 
@@ -581,6 +576,12 @@ $(function() {
 			param_info.resolution.title = "Angular Resolution";
 			param_info.resolution.units = "Arcseconds";
 		}
+		for (var i = 1; i <= 2; i++) {
+			var prefix = "#axis-" + i;
+			var p = param_info[axes[i-1]];
+			$(prefix + "-range-title").text(p ? p.title : i === 1 ? "X axis" : "Y axis");
+		}
+		
 		$("#plot_fixed_x").text("Plot at fixed " + (axes[0] ? param_info[axes[0]].title_sentence : "X"));
 		$("#plot_fixed_y").text("Plot at fixed " + (axes[1] ? param_info[axes[1]].title_sentence : "Y"));
 		if (!axes[0] || !axes[1] || axes[0] === axes[1]) {
