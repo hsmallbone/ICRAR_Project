@@ -573,6 +573,14 @@ $(function() {
 		}
 		axes[0] = $("#axis-1-select").val();
 		axes[1] = $("#axis-2-select").val();
+
+		if (document.getElementById('opt_use_physical_resolution').checked) {
+			param_info.resolution.title = "Physical Resolution";
+			param_info.resolution.units = "Kiloparsecs";
+		} else {
+			param_info.resolution.title = "Angular Resolution";
+			param_info.resolution.units = "Arcseconds";
+		}
 		$("#plot_fixed_x").text("Plot at fixed " + (axes[0] ? param_info[axes[0]].title_sentence : "X"));
 		$("#plot_fixed_y").text("Plot at fixed " + (axes[1] ? param_info[axes[1]].title_sentence : "Y"));
 		if (!axes[0] || !axes[1] || axes[0] === axes[1]) {
@@ -693,13 +701,6 @@ $(function() {
 	});
 
 	$("#opt_use_physical_resolution").change(function() {
-		if (this.checked) {
-			param_info.resolution.title = "Physical Resolution";
-			param_info.resolution.units = "Kiloparsecs";
-		} else {
-			param_info.resolution.title = "Angular Resolution";
-			param_info.resolution.units = "Arcseconds";
-		}
 		updateUI("physical-resolution");
 	});
 
