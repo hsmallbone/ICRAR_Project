@@ -12,5 +12,7 @@ Data files
 .telescope files inside icrar/config define the different available telescopes (e.g. ASKAP30, SKA, Meerkat). The format is
 
 Name
+
 Dish size
+
 Table of beam, rms, nhi, survey speed values
